@@ -26,8 +26,10 @@ type LessonItem = {
   meaning: string;
   theme: string;
   color: string;
-  visual: 'drop' | 'glass' | 'mango' | 'bread' | 'rice';
+  visual: 'drop' | 'glass' | 'mango' | 'bread' | 'rice' | 'swatch';
 };
+
+type ThemeId = 'food' | 'colors';
 
 type Theme = {
   id: string;
@@ -54,14 +56,28 @@ const foodItems: LessonItem[] = [
   { id: 'chawal', hindi: 'चावल', transliteration: 'chawal', meaning: 'rice', theme: 'Food', color: '#EEE7CF', visual: 'rice' },
 ];
 
+const colorItems: LessonItem[] = [
+  { id: 'laal', hindi: 'लाल', transliteration: 'laal', meaning: 'red', theme: 'Colors', color: '#D64545', visual: 'swatch' },
+  { id: 'neela', hindi: 'नीला', transliteration: 'neela', meaning: 'blue', theme: 'Colors', color: '#3E7CB1', visual: 'swatch' },
+  { id: 'peela', hindi: 'पीला', transliteration: 'peela', meaning: 'yellow', theme: 'Colors', color: '#F2C230', visual: 'swatch' },
+  { id: 'hara', hindi: 'हरा', transliteration: 'hara', meaning: 'green', theme: 'Colors', color: '#4CAF6D', visual: 'swatch' },
+  { id: 'kaala', hindi: 'काला', transliteration: 'kaala', meaning: 'black', theme: 'Colors', color: '#3A3A3A', visual: 'swatch' },
+];
+
+function itemsForTheme(themeId: ThemeId): LessonItem[] {
+  return themeId === 'colors' ? colorItems : foodItems;
+}
+
 const themes: Theme[] = [
   { id: 'food', title: 'Food', subtitle: 'Learn tasty everyday words', status: 'ready', color: '#F7B733' },
-  { id: 'colors', title: 'Colors', subtitle: 'Paint with Hindi words', status: 'soon', color: '#78C6E7' },
+  { id: 'colors', title: 'Colors', subtitle: 'Paint with Hindi words', status: 'ready', color: '#78C6E7' },
   { id: 'family', title: 'Family', subtitle: 'Words for people at home', status: 'soon', color: '#76B77C' },
   { id: 'sounds', title: 'Starter sounds', subtitle: 'Meet friendly Hindi letters', status: 'soon', color: '#E7755F' },
 ];
 
-const initialProgress: Progress = Object.fromEntries(foodItems.map((item) => [item.id, 'new'])) as Progress;
+const initialProgress: Progress = Object.fromEntries(
+  [...foodItems, ...colorItems].map((item) => [item.id, 'new']),
+) as Progress;
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('onboarding');
@@ -77,15 +93,20 @@ export default function App() {
   const [earnedReward, setEarnedReward] = useState('Mithu\'s picnic basket');
   const [missedThisLesson, setMissedThisLesson] = useState<string[]>([]);
   const [isReviewRound, setIsReviewRound] = useState(false);
+  const [activeTheme, setActiveTheme] = useState<ThemeId>('food');
 
-  const learnedCount = Object.values(progress).filter((status) => status === 'known').length;
-  const practiceCount = Object.values(progress).filter((status) => status === 'practice').length;
-  const roundItems = isReviewRound ? foodItems.filter((item) => missedThisLesson.includes(item.id)) : foodItems;
-  const currentItem = roundItems[matchIndex] ?? roundItems[0] ?? foodItems[0];
+  const themeItems = itemsForTheme(activeTheme);
+  const activeThemeMeta = themes.find((theme) => theme.id === activeTheme);
+  const foodLearnedCount = foodItems.filter((item) => progress[item.id] === 'known').length;
+  const foodPracticeCount = foodItems.filter((item) => progress[item.id] === 'practice').length;
+  const themeLearnedCount = themeItems.filter((item) => progress[item.id] === 'known').length;
+  const themePracticeCount = themeItems.filter((item) => progress[item.id] === 'practice').length;
+  const roundItems = isReviewRound ? themeItems.filter((item) => missedThisLesson.includes(item.id)) : themeItems;
+  const currentItem = roundItems[matchIndex] ?? roundItems[0] ?? themeItems[0];
   const adultSupport = mode !== 'Kid' || showPronunciation;
 
   const memoryCards = useMemo<MemoryCard[]>(() => {
-    const cards: MemoryCard[] = foodItems.slice(0, 4).flatMap((item) => [
+    const cards: MemoryCard[] = itemsForTheme(activeTheme).slice(0, 4).flatMap((item) => [
       { id: `${item.id}-sound`, itemId: item.id, kind: 'sound', label: item.hindi },
       { id: `${item.id}-meaning`, itemId: item.id, kind: 'meaning', label: item.meaning },
     ]);
@@ -94,7 +115,7 @@ export default function App() {
       [cards[i], cards[j]] = [cards[j], cards[i]];
     }
     return cards;
-  }, []);
+  }, [activeTheme]);
 
   useEffect(() => {
     if (screen === 'match') {
@@ -180,7 +201,7 @@ export default function App() {
           setMatchedCards(nextMatched);
           setFeedback('Pair found!');
           if (nextMatched.length === 4) {
-            setEarnedReward('Mithu\'s picnic basket');
+            setEarnedReward(activeTheme === 'colors' ? 'Mithu\'s color palette' : 'Mithu\'s picnic basket');
             setScreen('reward');
           }
         } else {
@@ -201,6 +222,7 @@ export default function App() {
     setFeedback('Tap what you hear.');
     setMissedThisLesson([]);
     setIsReviewRound(false);
+    setActiveTheme('food');
     setScreen('onboarding');
   }
 
@@ -276,11 +298,17 @@ export default function App() {
             </View>
 
             <View style={styles.statsRow}>
-              <StatCard label="Words learned" value={`${learnedCount}/5`} />
-              <StatCard label="Needs practice" value={`${practiceCount}`} />
+              <StatCard label="Words learned" value={`${foodLearnedCount}/${foodItems.length}`} />
+              <StatCard label="Needs practice" value={`${foodPracticeCount}`} />
             </View>
 
-            <PrimaryButton label={learnedCount > 0 ? 'Continue' : 'Start first lesson'} onPress={() => setScreen('lesson')} />
+            <PrimaryButton
+              label={foodLearnedCount > 0 ? 'Continue' : 'Start first lesson'}
+              onPress={() => {
+                setActiveTheme('food');
+                setScreen('lesson');
+              }}
+            />
             <SecondaryButton label="Choose a theme" onPress={() => setScreen('themes')} />
           </ScreenShell>
         )}
@@ -290,21 +318,29 @@ export default function App() {
             <Text style={styles.title}>Pick a theme</Text>
             <Text style={styles.subtitle}>Start with Food, then unlock more Hindi worlds.</Text>
             <View style={styles.themeGrid}>
-              {themes.map((theme) => (
-                <Pressable
-                  key={theme.id}
-                  style={[styles.themeTile, theme.status === 'soon' && styles.themeTileSoon]}
-                  onPress={() => (theme.status === 'ready' ? setScreen('lesson') : undefined)}
-                  accessibilityRole="button"
-                >
-                  <View style={[styles.themeDot, { backgroundColor: theme.color }]} />
-                  <Text style={styles.themeTitle}>{theme.title}</Text>
-                  <Text style={styles.themeSubtitle}>{theme.subtitle}</Text>
-                  <Text style={theme.status === 'ready' ? styles.readyBadge : styles.soonBadge}>
-                    {theme.status === 'ready' ? `${learnedCount}/5 learned` : 'Coming soon'}
-                  </Text>
-                </Pressable>
-              ))}
+              {themes.map((theme) => {
+                const items = theme.status === 'ready' ? itemsForTheme(theme.id as ThemeId) : [];
+                const learned = items.filter((item) => progress[item.id] === 'known').length;
+                return (
+                  <Pressable
+                    key={theme.id}
+                    style={[styles.themeTile, theme.status === 'soon' && styles.themeTileSoon]}
+                    onPress={() => {
+                      if (theme.status !== 'ready') return;
+                      setActiveTheme(theme.id as ThemeId);
+                      setScreen('lesson');
+                    }}
+                    accessibilityRole="button"
+                  >
+                    <View style={[styles.themeDot, { backgroundColor: theme.color }]} />
+                    <Text style={styles.themeTitle}>{theme.title}</Text>
+                    <Text style={styles.themeSubtitle}>{theme.subtitle}</Text>
+                    <Text style={theme.status === 'ready' ? styles.readyBadge : styles.soonBadge}>
+                      {theme.status === 'ready' ? `${learned}/${items.length} learned` : 'Coming soon'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </ScreenShell>
         )}
@@ -313,14 +349,14 @@ export default function App() {
           <ScreenShell>
             <View style={styles.lessonHeader}>
               <View>
-                <Text style={styles.kicker}>Food Game</Text>
-                <Text style={styles.title}>Learn 5 Hindi words</Text>
+                <Text style={styles.kicker}>{activeThemeMeta?.title ?? 'Food'} Game</Text>
+                <Text style={styles.title}>Learn {themeItems.length} Hindi words</Text>
               </View>
               <MithuParrot mood="ready" compact />
             </View>
             <Text style={styles.subtitle}>Tap a word to hear it. Then Mithu will quiz you.</Text>
             <View style={styles.wordPreviewGrid}>
-              {foodItems.map((item) => (
+              {themeItems.map((item) => (
                 <WordPreview key={item.id} item={item} showPronunciation={adultSupport} onPress={() => speakHindi(item.hindi)} />
               ))}
             </View>
@@ -351,7 +387,7 @@ export default function App() {
             </Pressable>
             <Text style={styles.feedbackText}>{feedback}</Text>
             <View style={styles.answerGrid}>
-              {foodItems.map((item) => {
+              {themeItems.map((item) => {
                 const isSelected = selectedAnswer === item.id;
                 const isCorrect = isSelected && item.id === currentItem.id;
                 const isWrong = isSelected && item.id !== currentItem.id;
@@ -380,7 +416,7 @@ export default function App() {
             <Text style={styles.feedbackText}>{feedback}</Text>
             <View style={styles.memoryGrid}>
               {memoryCards.map((card) => {
-                const item = foodItems.find((entry) => entry.id === card.itemId) ?? foodItems[0];
+                const item = themeItems.find((entry) => entry.id === card.itemId) ?? themeItems[0];
                 const isOpen = matchedCards.includes(card.itemId) || flippedCards.some((flipped) => flipped.id === card.id);
                 return (
                   <Pressable
@@ -409,9 +445,9 @@ export default function App() {
             <View style={styles.rewardPanel}>
               <MithuParrot mood="happy" />
               <Text style={styles.title}>You learned Hindi!</Text>
-              <Text style={styles.subtitle}>5 words practiced. Unlocked: {earnedReward}.</Text>
+              <Text style={styles.subtitle}>{themeItems.length} words practiced. Unlocked: {earnedReward}.</Text>
               <View style={styles.rewardBasket}>
-                {foodItems.slice(0, 4).map((item) => (
+                {themeItems.slice(0, 4).map((item) => (
                   <FoodVisual key={item.id} item={item} small />
                 ))}
               </View>
@@ -424,13 +460,13 @@ export default function App() {
         {screen === 'progress' && (
           <ScreenShell>
             <Text style={styles.title}>Your Hindi progress</Text>
-            <Text style={styles.subtitle}>A simple view for parents and adult learners.</Text>
+            <Text style={styles.subtitle}>{activeThemeMeta?.title ?? 'Food'} words · a simple view for parents and adult learners.</Text>
             <View style={styles.statsRow}>
-              <StatCard label="Words learned" value={`${learnedCount}`} />
-              <StatCard label="Needs practice" value={`${practiceCount}`} />
+              <StatCard label="Words learned" value={`${themeLearnedCount}`} />
+              <StatCard label="Needs practice" value={`${themePracticeCount}`} />
             </View>
             <View style={styles.progressList}>
-              {foodItems.map((item) => (
+              {themeItems.map((item) => (
                 <View key={item.id} style={styles.progressRow}>
                   <FoodVisual item={item} small />
                   <View style={styles.progressCopy}>
@@ -443,7 +479,7 @@ export default function App() {
                 </View>
               ))}
             </View>
-            <PrimaryButton label="Review Food" onPress={startLesson} />
+            <PrimaryButton label={`Review ${activeThemeMeta?.title ?? 'Food'}`} onPress={startLesson} />
             <SecondaryButton label="Reset prototype" onPress={resetPrototype} />
           </ScreenShell>
         )}
