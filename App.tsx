@@ -101,6 +101,27 @@ const themes: Theme[] = [
   { id: 'sounds', title: 'Starter sounds', subtitle: 'Meet friendly Hindi letters', status: 'soon', color: '#E7755F' },
 ];
 
+// Order in which themes unlock. Themes with no real content yet (status
+// 'soon') aren't part of this sequence — they stay locked regardless.
+const themeUnlockOrder: ThemeId[] = ['food', 'colors'];
+
+function isThemeMastered(themeId: ThemeId, progress: Progress): boolean {
+  return itemsForTheme(themeId).every((item) => progress[item.id] === 'known');
+}
+
+type ThemePlayability = 'ready' | 'locked' | 'soon';
+
+function themePlayability(theme: Theme, progress: Progress): ThemePlayability {
+  if (theme.status === 'soon') return 'soon';
+  const index = themeUnlockOrder.indexOf(theme.id as ThemeId);
+  if (index <= 0) return 'ready';
+  return isThemeMastered(themeUnlockOrder[index - 1], progress) ? 'ready' : 'locked';
+}
+
+function currentLevel(progress: Progress): number {
+  return 1 + themeUnlockOrder.filter((id) => isThemeMastered(id, progress)).length;
+}
+
 const initialProgress: Progress = Object.fromEntries(
   [...foodItems, ...colorItems].map((item) => [item.id, 'new']),
 ) as Progress;
@@ -138,6 +159,7 @@ export default function App() {
   const [matchedCards, setMatchedCards] = useState<string[]>([]);
   const [flippedCards, setFlippedCards] = useState<MemoryCard[]>([]);
   const [earnedReward, setEarnedReward] = useState('a picnic basket');
+  const [justMasteredTheme, setJustMasteredTheme] = useState<ThemeId | null>(null);
   const [missedThisLesson, setMissedThisLesson] = useState<string[]>([]);
   const [isReviewRound, setIsReviewRound] = useState(false);
   const [activeTheme, setActiveTheme] = useState<ThemeId>('food');
@@ -151,6 +173,15 @@ export default function App() {
   const themeItems = itemsForTheme(activeTheme);
   const activeThemeMeta = themes.find((theme) => theme.id === activeTheme);
   const characterMeta = characters.find((entry) => entry.id === character) ?? characters[0];
+  const masteryMessage = (() => {
+    if (!justMasteredTheme) return null;
+    const masteredMeta = themes.find((theme) => theme.id === justMasteredTheme);
+    const nextIndex = themeUnlockOrder.indexOf(justMasteredTheme) + 1;
+    const nextMeta = themes.find((theme) => theme.id === themeUnlockOrder[nextIndex]);
+    return nextMeta
+      ? `You mastered ${masteredMeta?.title}! ${nextMeta.title} is now unlocked.`
+      : `You mastered ${masteredMeta?.title}!`;
+  })();
   const foodLearnedCount = foodItems.filter((item) => progress[item.id] === 'known').length;
   const foodPracticeCount = foodItems.filter((item) => progress[item.id] === 'practice').length;
   const themeLearnedCount = themeItems.filter((item) => progress[item.id] === 'known').length;
@@ -223,6 +254,7 @@ export default function App() {
     setFeedback('Tap what you hear.');
     setMissedThisLesson([]);
     setIsReviewRound(false);
+    setJustMasteredTheme(null);
     setPromptOrder(shuffleItems(themeItems));
     setAnswerOrder(shuffleItems(themeItems));
     setScreen('match');
@@ -249,7 +281,14 @@ export default function App() {
 
     playSuccessSound();
     setFeedback(`Nice! ${currentItem.hindi} means ${currentItem.meaning}.`);
-    setProgress((prev) => ({ ...prev, [currentItem.id]: 'known' }));
+    const nextProgress = { ...progress, [currentItem.id]: 'known' as ItemStatus };
+    setProgress(nextProgress);
+
+    const wasMastered = isThemeMastered(activeTheme, progress);
+    const isMasteredNow = isThemeMastered(activeTheme, nextProgress);
+    if (!wasMastered && isMasteredNow) {
+      setJustMasteredTheme(activeTheme);
+    }
 
     let advanced = false;
     const advanceToNext = () => {
@@ -334,6 +373,7 @@ export default function App() {
     setFeedback('Tap what you hear.');
     setMissedThisLesson([]);
     setIsReviewRound(false);
+    setJustMasteredTheme(null);
     setActiveTheme('food');
     setScreen('onboarding');
   }
@@ -418,6 +458,9 @@ export default function App() {
 
         {screen === 'home' && (
           <ScreenShell>
+            <View style={styles.levelBadge}>
+              <Text style={styles.levelBadgeText}>Level {currentLevel(progress)}</Text>
+            </View>
             <View style={styles.homeHero}>
               <View style={styles.heroCopyWide}>
                 <Text style={styles.kicker}>Ready for a quick Hindi game?</Text>
@@ -445,18 +488,27 @@ export default function App() {
 
         {screen === 'themes' && (
           <ScreenShell>
-            <Text style={styles.title}>Pick a theme</Text>
-            <Text style={styles.subtitle}>Start with Food, then unlock more Hindi worlds.</Text>
+            <View style={styles.lessonHeader}>
+              <View>
+                <Text style={styles.title}>Pick a theme</Text>
+                <Text style={styles.subtitle}>Start with Food, then unlock more Hindi worlds.</Text>
+              </View>
+              <View style={styles.levelBadge}>
+                <Text style={styles.levelBadgeText}>Level {currentLevel(progress)}</Text>
+              </View>
+            </View>
             <View style={styles.themeGrid}>
-              {themes.map((theme) => {
-                const items = theme.status === 'ready' ? itemsForTheme(theme.id as ThemeId) : [];
+              {themes.map((theme, index) => {
+                const playability = themePlayability(theme, progress);
+                const items = playability === 'ready' ? itemsForTheme(theme.id as ThemeId) : [];
                 const learned = items.filter((item) => progress[item.id] === 'known').length;
+                const prevTheme = themes[index - 1];
                 return (
                   <Pressable
                     key={theme.id}
-                    style={[styles.themeTile, theme.status === 'soon' && styles.themeTileSoon]}
+                    style={[styles.themeTile, playability !== 'ready' && styles.themeTileSoon]}
                     onPress={() => {
-                      if (theme.status !== 'ready') return;
+                      if (playability !== 'ready') return;
                       setActiveTheme(theme.id as ThemeId);
                       setScreen('lesson');
                     }}
@@ -465,8 +517,12 @@ export default function App() {
                     <View style={[styles.themeDot, { backgroundColor: theme.color }]} />
                     <Text style={styles.themeTitle}>{theme.title}</Text>
                     <Text style={styles.themeSubtitle}>{theme.subtitle}</Text>
-                    <Text style={theme.status === 'ready' ? styles.readyBadge : styles.soonBadge}>
-                      {theme.status === 'ready' ? `${learned}/${items.length} learned` : 'Coming soon'}
+                    <Text style={playability === 'ready' ? styles.readyBadge : styles.soonBadge}>
+                      {playability === 'ready'
+                        ? `${learned}/${items.length} learned`
+                        : playability === 'locked'
+                          ? `Master ${prevTheme?.title ?? 'the previous theme'} to unlock`
+                          : 'Coming soon'}
                     </Text>
                   </Pressable>
                 );
@@ -581,6 +637,11 @@ export default function App() {
                   <FoodVisual key={item.id} item={item} small />
                 ))}
               </View>
+              {masteryMessage ? (
+                <View style={styles.masteryBanner}>
+                  <Text style={styles.masteryBannerText}>{masteryMessage}</Text>
+                </View>
+              ) : null}
             </View>
             <PrimaryButton label="Play next" onPress={() => setScreen('themes')} />
             <SecondaryButton label="See progress" onPress={() => setScreen('progress')} />
@@ -842,6 +903,24 @@ const styles = StyleSheet.create({
   themeSubtitle: { color: '#596270', fontSize: 14, lineHeight: 20 },
   readyBadge: { color: '#23613B', fontSize: 13, fontWeight: '900', marginTop: 4 },
   soonBadge: { color: '#8C5B10', fontSize: 13, fontWeight: '900', marginTop: 4 },
+  levelBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#24324C',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  levelBadgeText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
+  masteryBanner: {
+    backgroundColor: '#FFF7E6',
+    borderColor: '#F7B733',
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  masteryBannerText: { color: '#7B5B00', fontSize: 15, fontWeight: '900', textAlign: 'center' },
   lessonHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
   wordPreviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   wordPreview: {
