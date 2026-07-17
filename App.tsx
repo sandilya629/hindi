@@ -51,7 +51,7 @@ type LessonItem = {
   meaning: string;
   theme: string;
   color: string;
-  visual: 'drop' | 'glass' | 'mango' | 'bread' | 'rice' | 'banana' | 'swatch';
+  emoji: string;
 };
 
 type ThemeId = 'food' | 'colors';
@@ -74,20 +74,20 @@ type MemoryCard = {
 };
 
 const foodItems: LessonItem[] = [
-  { id: 'paani', hindi: 'पानी', transliteration: 'paani', meaning: 'water', theme: 'Food', color: '#78C6E7', visual: 'drop' },
-  { id: 'doodh', hindi: 'दूध', transliteration: 'doodh', meaning: 'milk', theme: 'Food', color: '#F6F1DF', visual: 'glass' },
-  { id: 'aam', hindi: 'आम', transliteration: 'aam', meaning: 'mango', theme: 'Food', color: '#F7B733', visual: 'mango' },
-  { id: 'roti', hindi: 'रोटी', transliteration: 'roti', meaning: 'flatbread', theme: 'Food', color: '#DFA45B', visual: 'bread' },
-  { id: 'chawal', hindi: 'चावल', transliteration: 'chawal', meaning: 'rice', theme: 'Food', color: '#EEE7CF', visual: 'rice' },
-  { id: 'kela', hindi: 'केला', transliteration: 'kela', meaning: 'banana', theme: 'Food', color: '#F5DE6E', visual: 'banana' },
+  { id: 'paani', hindi: 'पानी', transliteration: 'paani', meaning: 'water', theme: 'Food', color: '#78C6E7', emoji: '💧' },
+  { id: 'doodh', hindi: 'दूध', transliteration: 'doodh', meaning: 'milk', theme: 'Food', color: '#F6F1DF', emoji: '🥛' },
+  { id: 'aam', hindi: 'आम', transliteration: 'aam', meaning: 'mango', theme: 'Food', color: '#F7B733', emoji: '🥭' },
+  { id: 'roti', hindi: 'रोटी', transliteration: 'roti', meaning: 'flatbread', theme: 'Food', color: '#DFA45B', emoji: '🫓' },
+  { id: 'chawal', hindi: 'चावल', transliteration: 'chawal', meaning: 'rice', theme: 'Food', color: '#EEE7CF', emoji: '🍚' },
+  { id: 'kela', hindi: 'केला', transliteration: 'kela', meaning: 'banana', theme: 'Food', color: '#F5DE6E', emoji: '🍌' },
 ];
 
 const colorItems: LessonItem[] = [
-  { id: 'laal', hindi: 'लाल', transliteration: 'laal', meaning: 'red', theme: 'Colors', color: '#D64545', visual: 'swatch' },
-  { id: 'neela', hindi: 'नीला', transliteration: 'neela', meaning: 'blue', theme: 'Colors', color: '#3E7CB1', visual: 'swatch' },
-  { id: 'peela', hindi: 'पीला', transliteration: 'peela', meaning: 'yellow', theme: 'Colors', color: '#F2C230', visual: 'swatch' },
-  { id: 'hara', hindi: 'हरा', transliteration: 'hara', meaning: 'green', theme: 'Colors', color: '#4CAF6D', visual: 'swatch' },
-  { id: 'kaala', hindi: 'काला', transliteration: 'kaala', meaning: 'black', theme: 'Colors', color: '#3A3A3A', visual: 'swatch' },
+  { id: 'laal', hindi: 'लाल', transliteration: 'laal', meaning: 'red', theme: 'Colors', color: '#D64545', emoji: '🔴' },
+  { id: 'neela', hindi: 'नीला', transliteration: 'neela', meaning: 'blue', theme: 'Colors', color: '#3E7CB1', emoji: '🔵' },
+  { id: 'peela', hindi: 'पीला', transliteration: 'peela', meaning: 'yellow', theme: 'Colors', color: '#F2C230', emoji: '🟡' },
+  { id: 'hara', hindi: 'हरा', transliteration: 'hara', meaning: 'green', theme: 'Colors', color: '#4CAF6D', emoji: '🟢' },
+  { id: 'kaala', hindi: 'काला', transliteration: 'kaala', meaning: 'black', theme: 'Colors', color: '#3A3A3A', emoji: '⚫' },
 ];
 
 function itemsForTheme(themeId: ThemeId): LessonItem[] {
@@ -617,7 +617,7 @@ export default function App() {
                         <Text style={styles.memoryLabel}>{card.label}</Text>
                       </>
                     ) : (
-                      <Text style={styles.cardBack}>मि</Text>
+                      <Image source={characterImages[character]} style={styles.cardBackImage} />
                     )}
                   </Pressable>
                 );
@@ -755,12 +755,7 @@ function CharacterMascot({
 function FoodVisual({ item, small = false }: { item: LessonItem; small?: boolean }) {
   return (
     <View style={[styles.foodVisual, small && styles.foodVisualSmall, { backgroundColor: item.color }]}>
-      {item.visual === 'drop' ? <View style={[styles.dropShape, small && styles.dropShapeSmall]} /> : null}
-      {item.visual === 'glass' ? <View style={[styles.glassShape, small && styles.glassShapeSmall]} /> : null}
-      {item.visual === 'mango' ? <View style={[styles.mangoShape, small && styles.mangoShapeSmall]} /> : null}
-      {item.visual === 'bread' ? <View style={[styles.breadShape, small && styles.breadShapeSmall]} /> : null}
-      {item.visual === 'rice' ? <View style={[styles.riceShape, small && styles.riceShapeSmall]} /> : null}
-      {item.visual === 'banana' ? <View style={[styles.bananaShape, small && styles.bananaShapeSmall]} /> : null}
+      <Text style={[styles.foodVisualEmoji, small && styles.foodVisualEmojiSmall]}>{item.emoji}</Text>
     </View>
   );
 }
@@ -981,7 +976,7 @@ const styles = StyleSheet.create({
     width: '47%',
   },
   memoryCardOpen: { backgroundColor: '#FFFFFF', borderColor: '#DDE4EC', borderWidth: 1 },
-  cardBack: { color: '#F7B733', fontSize: 36, fontWeight: '900' },
+  cardBackImage: { borderRadius: 12, height: 64, resizeMode: 'contain', width: 64 },
   memoryLabel: { color: '#24324C', fontSize: 18, fontWeight: '900', marginTop: 6, textAlign: 'center' },
   rewardPanel: {
     alignItems: 'center',
@@ -1065,25 +1060,6 @@ const styles = StyleSheet.create({
     width: 58,
   },
   foodVisualSmall: { borderRadius: 18, height: 38, width: 38 },
-  dropShape: { backgroundColor: '#1E7DAD', borderBottomLeftRadius: 16, borderBottomRightRadius: 16, borderTopLeftRadius: 16, height: 34, transform: [{ rotate: '45deg' }], width: 34 },
-  dropShapeSmall: { height: 22, width: 22 },
-  glassShape: { backgroundColor: '#FFFFFF', borderColor: '#78C6E7', borderRadius: 8, borderWidth: 3, height: 34, width: 24 },
-  glassShapeSmall: { borderRadius: 6, height: 22, width: 16 },
-  mangoShape: { backgroundColor: '#F28C28', borderBottomLeftRadius: 22, borderBottomRightRadius: 18, borderTopLeftRadius: 18, borderTopRightRadius: 22, height: 36, transform: [{ rotate: '-15deg' }], width: 28 },
-  mangoShapeSmall: { height: 24, width: 19 },
-  breadShape: { backgroundColor: '#B9780D', borderRadius: 20, height: 34, width: 42 },
-  breadShapeSmall: { height: 22, width: 27 },
-  riceShape: { backgroundColor: '#FFFFFF', borderBottomLeftRadius: 20, borderBottomRightRadius: 20, borderColor: '#D7CBA9', borderTopLeftRadius: 8, borderTopRightRadius: 8, borderWidth: 2, height: 30, width: 42 },
-  riceShapeSmall: { height: 20, width: 27 },
-  bananaShape: {
-    backgroundColor: '#E8B923',
-    borderBottomLeftRadius: 22,
-    borderBottomRightRadius: 6,
-    borderTopLeftRadius: 6,
-    borderTopRightRadius: 22,
-    height: 20,
-    transform: [{ rotate: '-25deg' }],
-    width: 40,
-  },
-  bananaShapeSmall: { height: 14, width: 27 },
+  foodVisualEmoji: { fontSize: 30, lineHeight: 34 },
+  foodVisualEmojiSmall: { fontSize: 20, lineHeight: 24 },
 });
