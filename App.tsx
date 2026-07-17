@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import * as Speech from 'expo-speech';
 import { useEffect, useMemo, useState } from 'react';
@@ -10,9 +11,11 @@ import {
   View,
 } from 'react-native';
 
+const PROGRESS_STORAGE_KEY = 'hindi-quest-progress';
+
 function speakHindi(text: string) {
   Speech.stop();
-  Speech.speak(text, { language: 'hi-IN' });
+  Speech.speak(text, { language: 'hi-IN', rate: 0.8 });
 }
 
 type Screen = 'onboarding' | 'home' | 'themes' | 'lesson' | 'match' | 'memory' | 'reward' | 'progress';
@@ -95,6 +98,7 @@ export default function App() {
   const [missedThisLesson, setMissedThisLesson] = useState<string[]>([]);
   const [isReviewRound, setIsReviewRound] = useState(false);
   const [activeTheme, setActiveTheme] = useState<ThemeId>('food');
+  const [isProgressLoaded, setIsProgressLoaded] = useState(false);
 
   const themeItems = itemsForTheme(activeTheme);
   const activeThemeMeta = themes.find((theme) => theme.id === activeTheme);
@@ -123,6 +127,29 @@ export default function App() {
       speakHindi(currentItem.hindi);
     }
   }, [screen, matchIndex, isReviewRound]);
+
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(PROGRESS_STORAGE_KEY).then((stored) => {
+      if (cancelled) return;
+      if (stored) {
+        try {
+          setProgress(JSON.parse(stored));
+        } catch {
+          // ignore malformed stored progress, keep defaults
+        }
+      }
+      setIsProgressLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isProgressLoaded) return;
+    AsyncStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
+  }, [progress, isProgressLoaded]);
 
   function startLesson() {
     setMatchIndex(0);
