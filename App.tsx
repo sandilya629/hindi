@@ -26,7 +26,7 @@ type LessonItem = {
   meaning: string;
   theme: string;
   color: string;
-  visual: 'drop' | 'glass' | 'mango' | 'bread' | 'rice' | 'swatch';
+  visual: 'drop' | 'glass' | 'mango' | 'bread' | 'rice' | 'banana' | 'swatch';
 };
 
 type ThemeId = 'food' | 'colors';
@@ -54,6 +54,7 @@ const foodItems: LessonItem[] = [
   { id: 'aam', hindi: 'आम', transliteration: 'aam', meaning: 'mango', theme: 'Food', color: '#F7B733', visual: 'mango' },
   { id: 'roti', hindi: 'रोटी', transliteration: 'roti', meaning: 'flatbread', theme: 'Food', color: '#DFA45B', visual: 'bread' },
   { id: 'chawal', hindi: 'चावल', transliteration: 'chawal', meaning: 'rice', theme: 'Food', color: '#EEE7CF', visual: 'rice' },
+  { id: 'kela', hindi: 'केला', transliteration: 'kela', meaning: 'banana', theme: 'Food', color: '#F5DE6E', visual: 'banana' },
 ];
 
 const colorItems: LessonItem[] = [
@@ -563,6 +564,7 @@ function FoodVisual({ item, small = false }: { item: LessonItem; small?: boolean
       {item.visual === 'mango' ? <View style={[styles.mangoShape, small && styles.mangoShapeSmall]} /> : null}
       {item.visual === 'bread' ? <View style={[styles.breadShape, small && styles.breadShapeSmall]} /> : null}
       {item.visual === 'rice' ? <View style={[styles.riceShape, small && styles.riceShapeSmall]} /> : null}
+      {item.visual === 'banana' ? <View style={[styles.bananaShape, small && styles.bananaShapeSmall]} /> : null}
     </View>
   );
 }
@@ -889,4 +891,15 @@ const styles = StyleSheet.create({
   breadShapeSmall: { height: 22, width: 27 },
   riceShape: { backgroundColor: '#FFFFFF', borderBottomLeftRadius: 20, borderBottomRightRadius: 20, borderColor: '#D7CBA9', borderTopLeftRadius: 8, borderTopRightRadius: 8, borderWidth: 2, height: 30, width: 42 },
   riceShapeSmall: { height: 20, width: 27 },
+  bananaShape: {
+    backgroundColor: '#E8B923',
+    borderBottomLeftRadius: 22,
+    borderBottomRightRadius: 6,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 22,
+    height: 20,
+    transform: [{ rotate: '-25deg' }],
+    width: 40,
+  },
+  bananaShapeSmall: { height: 14, width: 27 },
 });
