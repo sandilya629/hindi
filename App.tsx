@@ -75,10 +75,13 @@ export default function App() {
   const [matchedCards, setMatchedCards] = useState<string[]>([]);
   const [flippedCards, setFlippedCards] = useState<MemoryCard[]>([]);
   const [earnedReward, setEarnedReward] = useState('Mithu\'s picnic basket');
+  const [missedThisLesson, setMissedThisLesson] = useState<string[]>([]);
+  const [isReviewRound, setIsReviewRound] = useState(false);
 
   const learnedCount = Object.values(progress).filter((status) => status === 'known').length;
   const practiceCount = Object.values(progress).filter((status) => status === 'practice').length;
-  const currentItem = foodItems[matchIndex] ?? foodItems[0];
+  const roundItems = isReviewRound ? foodItems.filter((item) => missedThisLesson.includes(item.id)) : foodItems;
+  const currentItem = roundItems[matchIndex] ?? roundItems[0] ?? foodItems[0];
   const adultSupport = mode !== 'Kid' || showPronunciation;
 
   const memoryCards = useMemo<MemoryCard[]>(() => {
@@ -97,13 +100,15 @@ export default function App() {
     if (screen === 'match') {
       speakHindi(currentItem.hindi);
     }
-  }, [screen, matchIndex]);
+  }, [screen, matchIndex, isReviewRound]);
 
   function startLesson() {
     setMatchIndex(0);
     setAttempts({});
     setSelectedAnswer(null);
     setFeedback('Tap what you hear.');
+    setMissedThisLesson([]);
+    setIsReviewRound(false);
     setScreen('match');
   }
 
@@ -121,6 +126,7 @@ export default function App() {
     if (!isCorrect) {
       setFeedback('Try again. Mithu will play it once more.');
       setProgress((prev) => ({ ...prev, [currentItem.id]: 'practice' }));
+      setMissedThisLesson((prev) => (prev.includes(currentItem.id) ? prev : [...prev, currentItem.id]));
       return;
     }
 
@@ -129,17 +135,26 @@ export default function App() {
     speakHindi(currentItem.hindi);
 
     setTimeout(() => {
-      if (matchIndex >= foodItems.length - 1) {
+      if (matchIndex < roundItems.length - 1) {
+        setMatchIndex((index) => index + 1);
         setSelectedAnswer(null);
-        setFeedback('Find the matching pairs.');
-        setMatchedCards([]);
-        setFlippedCards([]);
-        setScreen('memory');
+        setFeedback('Tap what you hear.');
         return;
       }
-      setMatchIndex((index) => index + 1);
+
+      if (!isReviewRound && missedThisLesson.length > 0) {
+        setIsReviewRound(true);
+        setMatchIndex(0);
+        setSelectedAnswer(null);
+        setFeedback('Review round: let\'s try those tricky words again.');
+        return;
+      }
+
       setSelectedAnswer(null);
-      setFeedback('Tap what you hear.');
+      setFeedback('Find the matching pairs.');
+      setMatchedCards([]);
+      setFlippedCards([]);
+      setScreen('memory');
     }, 700);
   }
 
@@ -184,6 +199,8 @@ export default function App() {
     setFlippedCards([]);
     setSelectedAnswer(null);
     setFeedback('Tap what you hear.');
+    setMissedThisLesson([]);
+    setIsReviewRound(false);
     setScreen('onboarding');
   }
 
@@ -315,8 +332,8 @@ export default function App() {
         {screen === 'match' && (
           <ScreenShell>
             <View style={styles.gameHeader}>
-              <Text style={styles.progressText}>{matchIndex + 1}/{foodItems.length}</Text>
-              <Text style={styles.kicker}>Match and Listen</Text>
+              <Text style={styles.progressText}>{matchIndex + 1}/{roundItems.length}</Text>
+              <Text style={styles.kicker}>{isReviewRound ? 'Review round' : 'Match and Listen'}</Text>
             </View>
             <Pressable
               style={styles.soundCard}
