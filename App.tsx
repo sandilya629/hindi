@@ -21,6 +21,8 @@ function speakHindi(text: string) {
 type Screen = 'onboarding' | 'home' | 'themes' | 'lesson' | 'match' | 'memory' | 'reward' | 'progress';
 type LearnerMode = 'Kid' | 'Adult' | 'Family';
 type ItemStatus = 'new' | 'known' | 'practice';
+type CharacterId = 'mithu' | 'bunny' | 'golu';
+type CharacterMood = 'hello' | 'ready' | 'speak' | 'happy';
 
 type LessonItem = {
   id: string;
@@ -83,6 +85,14 @@ const initialProgress: Progress = Object.fromEntries(
   [...foodItems, ...colorItems].map((item) => [item.id, 'new']),
 ) as Progress;
 
+const characters: { id: CharacterId; name: string; subtitle: string }[] = [
+  { id: 'mithu', name: 'Mithu', subtitle: 'the parrot' },
+  { id: 'bunny', name: 'Bunny', subtitle: 'the rainbow bunny' },
+  { id: 'golu', name: 'Golu', subtitle: 'the elephant' },
+];
+
+const CHARACTER_STORAGE_KEY = 'hindi-quest-character';
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>('onboarding');
   const [mode, setMode] = useState<LearnerMode>('Kid');
@@ -94,14 +104,17 @@ export default function App() {
   const [feedback, setFeedback] = useState('Tap what you hear.');
   const [matchedCards, setMatchedCards] = useState<string[]>([]);
   const [flippedCards, setFlippedCards] = useState<MemoryCard[]>([]);
-  const [earnedReward, setEarnedReward] = useState('Mithu\'s picnic basket');
+  const [earnedReward, setEarnedReward] = useState('a picnic basket');
   const [missedThisLesson, setMissedThisLesson] = useState<string[]>([]);
   const [isReviewRound, setIsReviewRound] = useState(false);
   const [activeTheme, setActiveTheme] = useState<ThemeId>('food');
   const [isProgressLoaded, setIsProgressLoaded] = useState(false);
+  const [character, setCharacter] = useState<CharacterId>('mithu');
+  const [isCharacterLoaded, setIsCharacterLoaded] = useState(false);
 
   const themeItems = itemsForTheme(activeTheme);
   const activeThemeMeta = themes.find((theme) => theme.id === activeTheme);
+  const characterMeta = characters.find((entry) => entry.id === character) ?? characters[0];
   const foodLearnedCount = foodItems.filter((item) => progress[item.id] === 'known').length;
   const foodPracticeCount = foodItems.filter((item) => progress[item.id] === 'practice').length;
   const themeLearnedCount = themeItems.filter((item) => progress[item.id] === 'known').length;
@@ -151,6 +164,25 @@ export default function App() {
     AsyncStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
   }, [progress, isProgressLoaded]);
 
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(CHARACTER_STORAGE_KEY).then((stored) => {
+      if (cancelled) return;
+      if (stored === 'mithu' || stored === 'bunny' || stored === 'golu') {
+        setCharacter(stored);
+      }
+      setIsCharacterLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isCharacterLoaded) return;
+    AsyncStorage.setItem(CHARACTER_STORAGE_KEY, character);
+  }, [character, isCharacterLoaded]);
+
   function startLesson() {
     setMatchIndex(0);
     setAttempts({});
@@ -173,7 +205,7 @@ export default function App() {
     setSelectedAnswer(itemId);
 
     if (!isCorrect) {
-      setFeedback('Try again. Mithu will play it once more.');
+      setFeedback(`Try again. ${characterMeta.name} will play it once more.`);
       setProgress((prev) => ({ ...prev, [currentItem.id]: 'practice' }));
       setMissedThisLesson((prev) => (prev.includes(currentItem.id) ? prev : [...prev, currentItem.id]));
       return;
@@ -229,7 +261,7 @@ export default function App() {
           setMatchedCards(nextMatched);
           setFeedback('Pair found!');
           if (nextMatched.length === 4) {
-            setEarnedReward(activeTheme === 'colors' ? 'Mithu\'s color palette' : 'Mithu\'s picnic basket');
+            setEarnedReward(`${characterMeta.name}'s ${activeTheme === 'colors' ? 'color palette' : 'picnic basket'}`);
             setScreen('reward');
           }
         } else {
@@ -273,11 +305,29 @@ export default function App() {
         {screen === 'onboarding' && (
           <ScreenShell>
             <View style={styles.heroRow}>
-              <MithuParrot mood="hello" />
+              <CharacterMascot character={character} mood="hello" />
               <View style={styles.heroCopy}>
-                <Text style={styles.kicker}>Meet Mithu</Text>
+                <Text style={styles.kicker}>Meet {characterMeta.name}</Text>
                 <Text style={styles.title}>Hindi Quest</Text>
                 <Text style={styles.subtitle}>Learn Hindi through quick, happy games.</Text>
+              </View>
+            </View>
+
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>Choose your guide</Text>
+              <View style={styles.characterRow}>
+                {characters.map((option) => (
+                  <Pressable
+                    key={option.id}
+                    onPress={() => setCharacter(option.id)}
+                    style={[styles.characterTile, character === option.id && styles.characterTileActive]}
+                    accessibilityRole="button"
+                  >
+                    <CharacterMascot character={option.id} mood="ready" compact />
+                    <Text style={styles.characterName}>{option.name}</Text>
+                    <Text style={styles.characterSubtitle}>{option.subtitle}</Text>
+                  </Pressable>
+                ))}
               </View>
             </View>
 
@@ -308,7 +358,7 @@ export default function App() {
                 <Text style={styles.toggleText}>Show pronunciation help</Text>
               </Pressable>
 
-              <Text style={styles.helperText}>Turn sound on. Mithu will say each Hindi word.</Text>
+              <Text style={styles.helperText}>Turn sound on. {characterMeta.name} will say each Hindi word.</Text>
               <PrimaryButton label="Start" onPress={() => setScreen('home')} />
             </View>
           </ScreenShell>
@@ -320,9 +370,9 @@ export default function App() {
               <View style={styles.heroCopyWide}>
                 <Text style={styles.kicker}>Ready for a quick Hindi game?</Text>
                 <Text style={styles.title}>Play the Food lesson</Text>
-                <Text style={styles.subtitle}>Hear Hindi, tap the right tile, and help Mithu pack a picnic.</Text>
+                <Text style={styles.subtitle}>Hear Hindi, tap the right tile, and help {characterMeta.name} pack a picnic.</Text>
               </View>
-              <MithuParrot mood="ready" />
+              <CharacterMascot character={character} mood="ready" />
             </View>
 
             <View style={styles.statsRow}>
@@ -380,9 +430,9 @@ export default function App() {
                 <Text style={styles.kicker}>{activeThemeMeta?.title ?? 'Food'} Game</Text>
                 <Text style={styles.title}>Learn {themeItems.length} Hindi words</Text>
               </View>
-              <MithuParrot mood="ready" compact />
+              <CharacterMascot character={character} mood="ready" compact />
             </View>
-            <Text style={styles.subtitle}>Tap a word to hear it. Then Mithu will quiz you.</Text>
+            <Text style={styles.subtitle}>Tap a word to hear it. Then {characterMeta.name} will quiz you.</Text>
             <View style={styles.wordPreviewGrid}>
               {themeItems.map((item) => (
                 <WordPreview key={item.id} item={item} showPronunciation={adultSupport} onPress={() => speakHindi(item.hindi)} />
@@ -405,7 +455,7 @@ export default function App() {
               accessibilityRole="button"
               accessibilityLabel="Replay the Hindi word"
             >
-              <MithuParrot mood="speak" compact />
+              <CharacterMascot character={character} mood="speak" compact />
               <View style={styles.soundCopy}>
                 <Text style={styles.instruction}>Tap what you hear.</Text>
                 <Text style={styles.promptWord}>{currentItem.hindi}</Text>
@@ -471,7 +521,7 @@ export default function App() {
         {screen === 'reward' && (
           <ScreenShell>
             <View style={styles.rewardPanel}>
-              <MithuParrot mood="happy" />
+              <CharacterMascot character={character} mood="happy" />
               <Text style={styles.title}>You learned Hindi!</Text>
               <Text style={styles.subtitle}>{themeItems.length} words practiced. Unlocked: {earnedReward}.</Text>
               <View style={styles.rewardBasket}>
@@ -564,9 +614,30 @@ function WordPreview({
   );
 }
 
-function MithuParrot({ compact = false, mood }: { compact?: boolean; mood: 'hello' | 'ready' | 'speak' | 'happy' }) {
+function CharacterMascot({
+  character,
+  compact = false,
+  mood,
+}: {
+  character: CharacterId;
+  compact?: boolean;
+  mood: CharacterMood;
+}) {
   return (
-    <View style={[styles.mithu, compact && styles.mithuCompact]}>
+    <View style={[styles.mascot, compact && styles.mascotCompact]}>
+      {character === 'mithu' ? <MithuShapes compact={compact} mood={mood} /> : null}
+      {character === 'bunny' ? <BunnyShapes compact={compact} mood={mood} /> : null}
+      {character === 'golu' ? <GoluShapes compact={compact} mood={mood} /> : null}
+      <Text style={[styles.mascotBubble, compact && styles.mascotBubbleCompact]}>
+        {mood === 'hello' ? 'नमस्ते' : mood === 'speak' ? 'सुनो' : mood === 'happy' ? 'शाबाश' : 'चलो'}
+      </Text>
+    </View>
+  );
+}
+
+function MithuShapes({ compact, mood }: { compact: boolean; mood: CharacterMood }) {
+  return (
+    <>
       <View style={[styles.mithuWing, compact && styles.mithuWingCompact]} />
       <View style={[styles.mithuBody, compact && styles.mithuBodyCompact]}>
         <View style={[styles.mithuFace, compact && styles.mithuFaceCompact]}>
@@ -576,10 +647,49 @@ function MithuParrot({ compact = false, mood }: { compact?: boolean; mood: 'hell
         <View style={[styles.beak, compact && styles.beakCompact]} />
         <View style={[styles.cheek, mood === 'happy' && styles.cheekHappy]} />
       </View>
-      <Text style={[styles.mithuBubble, compact && styles.mithuBubbleCompact]}>
-        {mood === 'hello' ? 'नमस्ते' : mood === 'speak' ? 'सुनो' : mood === 'happy' ? 'शाबाश' : 'चलो'}
-      </Text>
-    </View>
+    </>
+  );
+}
+
+function BunnyShapes({ compact, mood }: { compact: boolean; mood: CharacterMood }) {
+  return (
+    <>
+      <View style={[styles.bunnyEar, styles.bunnyEarLeft, compact && styles.bunnyEarCompact]}>
+        <View style={[styles.bunnyEarStripe, { top: '18%', backgroundColor: '#F7A8C4' }]} />
+        <View style={[styles.bunnyEarStripe, { top: '45%', backgroundColor: '#F7DE8B' }]} />
+        <View style={[styles.bunnyEarStripe, { top: '72%', backgroundColor: '#9CD6E0' }]} />
+      </View>
+      <View style={[styles.bunnyEar, styles.bunnyEarRight, compact && styles.bunnyEarCompact]}>
+        <View style={[styles.bunnyEarStripe, { top: '18%', backgroundColor: '#9CD6E0' }]} />
+        <View style={[styles.bunnyEarStripe, { top: '45%', backgroundColor: '#F7DE8B' }]} />
+        <View style={[styles.bunnyEarStripe, { top: '72%', backgroundColor: '#F7A8C4' }]} />
+      </View>
+      <View style={[styles.bunnyBody, compact && styles.bunnyBodyCompact]}>
+        <View style={[styles.bunnyFace, compact && styles.bunnyFaceCompact]}>
+          <View style={styles.eye} />
+          <View style={styles.eye} />
+        </View>
+        <View style={[styles.bunnyNose, compact && styles.bunnyNoseCompact]} />
+        <View style={[styles.bunnyCheek, mood === 'happy' && styles.bunnyCheekHappy]} />
+      </View>
+    </>
+  );
+}
+
+function GoluShapes({ compact, mood }: { compact: boolean; mood: CharacterMood }) {
+  return (
+    <>
+      <View style={[styles.goluEar, styles.goluEarLeft, compact && styles.goluEarCompact]} />
+      <View style={[styles.goluEar, styles.goluEarRight, compact && styles.goluEarCompact]} />
+      <View style={[styles.goluBody, compact && styles.goluBodyCompact]}>
+        <View style={[styles.goluFace, compact && styles.goluFaceCompact]}>
+          <View style={styles.eye} />
+          <View style={styles.eye} />
+        </View>
+        <View style={[styles.goluTrunk, compact && styles.goluTrunkCompact]} />
+        <View style={[styles.goluCheek, mood === 'happy' && styles.goluCheekHappy]} />
+      </View>
+    </>
   );
 }
 
@@ -656,6 +766,21 @@ const styles = StyleSheet.create({
   segmentActive: { backgroundColor: '#24324C', borderColor: '#24324C' },
   segmentText: { color: '#334155', fontSize: 15, fontWeight: '800' },
   segmentTextActive: { color: '#FFFFFF' },
+  characterRow: { flexDirection: 'row', gap: 8 },
+  characterTile: {
+    alignItems: 'center',
+    backgroundColor: '#F4F6F8',
+    borderColor: '#D8DEE8',
+    borderRadius: 16,
+    borderWidth: 1,
+    flex: 1,
+    gap: 2,
+    paddingBottom: 10,
+    paddingTop: 4,
+  },
+  characterTileActive: { backgroundColor: '#FFF7E6', borderColor: '#B9780D' },
+  characterName: { color: '#24324C', fontSize: 14, fontWeight: '900' },
+  characterSubtitle: { color: '#596270', fontSize: 11, fontWeight: '700', textAlign: 'center' },
   toggleRow: { alignItems: 'center', flexDirection: 'row', gap: 12, minHeight: 52 },
   toggleTrack: {
     backgroundColor: '#D9E1EA',
@@ -835,8 +960,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  mithu: { alignItems: 'center', height: 162, justifyContent: 'center', width: 122 },
-  mithuCompact: { height: 92, width: 76 },
+  mascot: { alignItems: 'center', height: 162, justifyContent: 'center', width: 122 },
+  mascotCompact: { height: 92, width: 76 },
   mithuWing: {
     backgroundColor: '#2F8F6A',
     borderRadius: 34,
@@ -884,7 +1009,100 @@ const styles = StyleSheet.create({
   beakCompact: { height: 10, width: 17 },
   cheek: { backgroundColor: '#E7755F', borderRadius: 8, height: 10, marginTop: 5, opacity: 0.8, width: 18 },
   cheekHappy: { width: 28 },
-  mithuBubble: {
+  bunnyEar: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E88AA6',
+    borderRadius: 16,
+    borderWidth: 2,
+    height: 70,
+    overflow: 'hidden',
+    position: 'absolute',
+    top: 2,
+    width: 26,
+  },
+  bunnyEarLeft: { left: 28, transform: [{ rotate: '-8deg' }] },
+  bunnyEarRight: { left: 68, transform: [{ rotate: '8deg' }] },
+  bunnyEarCompact: { borderRadius: 10, height: 42, top: 0, width: 17 },
+  bunnyEarStripe: { height: 8, left: 2, position: 'absolute', right: 2 },
+  bunnyBody: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E88AA6',
+    borderRadius: 46,
+    borderWidth: 2,
+    height: 100,
+    justifyContent: 'center',
+    marginTop: 46,
+    width: 86,
+  },
+  bunnyBodyCompact: { borderRadius: 28, height: 62, marginTop: 28, width: 52 },
+  bunnyFace: {
+    alignItems: 'center',
+    backgroundColor: '#FDEAF0',
+    borderRadius: 20,
+    flexDirection: 'row',
+    gap: 12,
+    height: 36,
+    justifyContent: 'center',
+    width: 54,
+  },
+  bunnyFaceCompact: { borderRadius: 13, gap: 7, height: 23, width: 34 },
+  bunnyNose: { backgroundColor: '#E88AA6', borderRadius: 5, height: 10, marginTop: -2, width: 14 },
+  bunnyNoseCompact: { height: 7, width: 10 },
+  bunnyCheek: { backgroundColor: '#F7A8C4', borderRadius: 8, height: 10, marginTop: 5, opacity: 0.85, width: 18 },
+  bunnyCheekHappy: { width: 28 },
+  goluEar: {
+    backgroundColor: '#AEC6D8',
+    borderColor: '#6C93AC',
+    borderRadius: 30,
+    borderWidth: 2,
+    height: 64,
+    position: 'absolute',
+    top: 48,
+    width: 50,
+  },
+  goluEarLeft: { left: 2 },
+  goluEarRight: { left: 70 },
+  goluEarCompact: { borderRadius: 18, height: 40, left: 0, top: 30, width: 32 },
+  goluBody: {
+    alignItems: 'center',
+    backgroundColor: '#C9DCE8',
+    borderColor: '#6C93AC',
+    borderRadius: 44,
+    borderWidth: 2,
+    height: 100,
+    justifyContent: 'center',
+    width: 82,
+  },
+  goluBodyCompact: { borderRadius: 27, height: 62, width: 50 },
+  goluFace: {
+    alignItems: 'center',
+    backgroundColor: '#E4EEF4',
+    borderRadius: 20,
+    flexDirection: 'row',
+    gap: 12,
+    height: 36,
+    justifyContent: 'center',
+    width: 52,
+  },
+  goluFaceCompact: { borderRadius: 13, gap: 7, height: 23, width: 33 },
+  goluTrunk: {
+    backgroundColor: '#7FA3BE',
+    borderColor: '#4F7791',
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 4,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    borderWidth: 2,
+    height: 36,
+    marginTop: 2,
+    transform: [{ rotate: '14deg' }],
+    width: 16,
+  },
+  goluTrunkCompact: { height: 22, marginTop: 1, width: 10 },
+  goluCheek: { backgroundColor: '#F0C5A8', borderRadius: 8, height: 10, marginTop: 5, opacity: 0.85, width: 18 },
+  goluCheekHappy: { width: 28 },
+  mascotBubble: {
     backgroundColor: '#FFFFFF',
     borderColor: '#DDE4EC',
     borderRadius: 14,
@@ -897,7 +1115,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  mithuBubbleCompact: { fontSize: 11, paddingHorizontal: 7, paddingVertical: 3 },
+  mascotBubbleCompact: { fontSize: 11, paddingHorizontal: 7, paddingVertical: 3 },
   foodVisual: {
     alignItems: 'center',
     borderColor: 'rgba(36,50,76,0.14)',
