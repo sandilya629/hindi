@@ -1,8 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import * as Speech from 'expo-speech';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  Image,
+  ImageSourcePropType,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -16,6 +18,15 @@ const PROGRESS_STORAGE_KEY = 'hindi-quest-progress';
 function speakHindi(text: string) {
   Speech.stop();
   Speech.speak(text, { language: 'hi-IN', rate: 0.8 });
+}
+
+function shuffleItems<T>(items: T[]): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
 }
 
 type Screen = 'onboarding' | 'home' | 'themes' | 'lesson' | 'match' | 'memory' | 'reward' | 'progress';
@@ -111,6 +122,9 @@ export default function App() {
   const [isProgressLoaded, setIsProgressLoaded] = useState(false);
   const [character, setCharacter] = useState<CharacterId>('mithu');
   const [isCharacterLoaded, setIsCharacterLoaded] = useState(false);
+  const [promptOrder, setPromptOrder] = useState<LessonItem[]>([]);
+  const [answerOrder, setAnswerOrder] = useState<LessonItem[]>([]);
+  const [memoryCards, setMemoryCards] = useState<MemoryCard[]>([]);
 
   const themeItems = itemsForTheme(activeTheme);
   const activeThemeMeta = themes.find((theme) => theme.id === activeTheme);
@@ -119,27 +133,24 @@ export default function App() {
   const foodPracticeCount = foodItems.filter((item) => progress[item.id] === 'practice').length;
   const themeLearnedCount = themeItems.filter((item) => progress[item.id] === 'known').length;
   const themePracticeCount = themeItems.filter((item) => progress[item.id] === 'practice').length;
-  const roundItems = isReviewRound ? themeItems.filter((item) => missedThisLesson.includes(item.id)) : themeItems;
-  const currentItem = roundItems[matchIndex] ?? roundItems[0] ?? themeItems[0];
+  const currentItem = promptOrder[matchIndex] ?? promptOrder[0] ?? themeItems[0];
   const adultSupport = mode !== 'Kid' || showPronunciation;
-
-  const memoryCards = useMemo<MemoryCard[]>(() => {
-    const cards: MemoryCard[] = itemsForTheme(activeTheme).slice(0, 4).flatMap((item) => [
-      { id: `${item.id}-sound`, itemId: item.id, kind: 'sound', label: item.hindi },
-      { id: `${item.id}-meaning`, itemId: item.id, kind: 'meaning', label: item.meaning },
-    ]);
-    for (let i = cards.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [cards[i], cards[j]] = [cards[j], cards[i]];
-    }
-    return cards;
-  }, [activeTheme]);
 
   useEffect(() => {
     if (screen === 'match') {
       speakHindi(currentItem.hindi);
     }
   }, [screen, matchIndex, isReviewRound]);
+
+  useEffect(() => {
+    if (screen === 'memory') {
+      const cards: MemoryCard[] = itemsForTheme(activeTheme).slice(0, 4).flatMap((item) => [
+        { id: `${item.id}-sound`, itemId: item.id, kind: 'sound', label: item.hindi },
+        { id: `${item.id}-meaning`, itemId: item.id, kind: 'meaning', label: item.meaning },
+      ]);
+      setMemoryCards(shuffleItems(cards));
+    }
+  }, [screen, activeTheme]);
 
   useEffect(() => {
     let cancelled = false;
@@ -190,6 +201,8 @@ export default function App() {
     setFeedback('Tap what you hear.');
     setMissedThisLesson([]);
     setIsReviewRound(false);
+    setPromptOrder(shuffleItems(themeItems));
+    setAnswerOrder(shuffleItems(themeItems));
     setScreen('match');
   }
 
@@ -216,8 +229,9 @@ export default function App() {
     speakHindi(currentItem.hindi);
 
     setTimeout(() => {
-      if (matchIndex < roundItems.length - 1) {
+      if (matchIndex < promptOrder.length - 1) {
         setMatchIndex((index) => index + 1);
+        setAnswerOrder(shuffleItems(themeItems));
         setSelectedAnswer(null);
         setFeedback('Tap what you hear.');
         return;
@@ -226,6 +240,8 @@ export default function App() {
       if (!isReviewRound && missedThisLesson.length > 0) {
         setIsReviewRound(true);
         setMatchIndex(0);
+        setPromptOrder(shuffleItems(themeItems.filter((item) => missedThisLesson.includes(item.id))));
+        setAnswerOrder(shuffleItems(themeItems));
         setSelectedAnswer(null);
         setFeedback('Review round: let\'s try those tricky words again.');
         return;
@@ -446,7 +462,7 @@ export default function App() {
         {screen === 'match' && (
           <ScreenShell>
             <View style={styles.gameHeader}>
-              <Text style={styles.progressText}>{matchIndex + 1}/{roundItems.length}</Text>
+              <Text style={styles.progressText}>{matchIndex + 1}/{promptOrder.length}</Text>
               <Text style={styles.kicker}>{isReviewRound ? 'Review round' : 'Match and Listen'}</Text>
             </View>
             <Pressable
@@ -465,7 +481,7 @@ export default function App() {
             </Pressable>
             <Text style={styles.feedbackText}>{feedback}</Text>
             <View style={styles.answerGrid}>
-              {themeItems.map((item) => {
+              {answerOrder.map((item) => {
                 const isSelected = selectedAnswer === item.id;
                 const isCorrect = isSelected && item.id === currentItem.id;
                 const isWrong = isSelected && item.id !== currentItem.id;
@@ -614,6 +630,12 @@ function WordPreview({
   );
 }
 
+const characterImages: Record<CharacterId, ImageSourcePropType> = {
+  mithu: require('./assets/characters/mithu.png'),
+  bunny: require('./assets/characters/bunny.png'),
+  golu: require('./assets/characters/golu.png'),
+};
+
 function CharacterMascot({
   character,
   compact = false,
@@ -625,71 +647,11 @@ function CharacterMascot({
 }) {
   return (
     <View style={[styles.mascot, compact && styles.mascotCompact]}>
-      {character === 'mithu' ? <MithuShapes compact={compact} mood={mood} /> : null}
-      {character === 'bunny' ? <BunnyShapes compact={compact} mood={mood} /> : null}
-      {character === 'golu' ? <GoluShapes compact={compact} mood={mood} /> : null}
+      <Image source={characterImages[character]} style={[styles.mascotImage, compact && styles.mascotImageCompact]} />
       <Text style={[styles.mascotBubble, compact && styles.mascotBubbleCompact]}>
         {mood === 'hello' ? 'नमस्ते' : mood === 'speak' ? 'सुनो' : mood === 'happy' ? 'शाबाश' : 'चलो'}
       </Text>
     </View>
-  );
-}
-
-function MithuShapes({ compact, mood }: { compact: boolean; mood: CharacterMood }) {
-  return (
-    <>
-      <View style={[styles.mithuWing, compact && styles.mithuWingCompact]} />
-      <View style={[styles.mithuBody, compact && styles.mithuBodyCompact]}>
-        <View style={[styles.mithuFace, compact && styles.mithuFaceCompact]}>
-          <View style={styles.eye} />
-          <View style={styles.eye} />
-        </View>
-        <View style={[styles.beak, compact && styles.beakCompact]} />
-        <View style={[styles.cheek, mood === 'happy' && styles.cheekHappy]} />
-      </View>
-    </>
-  );
-}
-
-function BunnyShapes({ compact, mood }: { compact: boolean; mood: CharacterMood }) {
-  return (
-    <>
-      <View style={[styles.bunnyEar, styles.bunnyEarLeft, compact && styles.bunnyEarCompact]}>
-        <View style={[styles.bunnyEarStripe, { top: '18%', backgroundColor: '#F7A8C4' }]} />
-        <View style={[styles.bunnyEarStripe, { top: '45%', backgroundColor: '#F7DE8B' }]} />
-        <View style={[styles.bunnyEarStripe, { top: '72%', backgroundColor: '#9CD6E0' }]} />
-      </View>
-      <View style={[styles.bunnyEar, styles.bunnyEarRight, compact && styles.bunnyEarCompact]}>
-        <View style={[styles.bunnyEarStripe, { top: '18%', backgroundColor: '#9CD6E0' }]} />
-        <View style={[styles.bunnyEarStripe, { top: '45%', backgroundColor: '#F7DE8B' }]} />
-        <View style={[styles.bunnyEarStripe, { top: '72%', backgroundColor: '#F7A8C4' }]} />
-      </View>
-      <View style={[styles.bunnyBody, compact && styles.bunnyBodyCompact]}>
-        <View style={[styles.bunnyFace, compact && styles.bunnyFaceCompact]}>
-          <View style={styles.eye} />
-          <View style={styles.eye} />
-        </View>
-        <View style={[styles.bunnyNose, compact && styles.bunnyNoseCompact]} />
-        <View style={[styles.bunnyCheek, mood === 'happy' && styles.bunnyCheekHappy]} />
-      </View>
-    </>
-  );
-}
-
-function GoluShapes({ compact, mood }: { compact: boolean; mood: CharacterMood }) {
-  return (
-    <>
-      <View style={[styles.goluEar, styles.goluEarLeft, compact && styles.goluEarCompact]} />
-      <View style={[styles.goluEar, styles.goluEarRight, compact && styles.goluEarCompact]} />
-      <View style={[styles.goluBody, compact && styles.goluBodyCompact]}>
-        <View style={[styles.goluFace, compact && styles.goluFaceCompact]}>
-          <View style={styles.eye} />
-          <View style={styles.eye} />
-        </View>
-        <View style={[styles.goluTrunk, compact && styles.goluTrunkCompact]} />
-        <View style={[styles.goluCheek, mood === 'happy' && styles.goluCheekHappy]} />
-      </View>
-    </>
   );
 }
 
@@ -962,146 +924,8 @@ const styles = StyleSheet.create({
   },
   mascot: { alignItems: 'center', height: 162, justifyContent: 'center', width: 122 },
   mascotCompact: { height: 92, width: 76 },
-  mithuWing: {
-    backgroundColor: '#2F8F6A',
-    borderRadius: 34,
-    height: 70,
-    left: 10,
-    position: 'absolute',
-    top: 62,
-    transform: [{ rotate: '-16deg' }],
-    width: 52,
-  },
-  mithuWingCompact: { borderRadius: 20, height: 42, top: 38, width: 30 },
-  mithuBody: {
-    alignItems: 'center',
-    backgroundColor: '#76B77C',
-    borderColor: '#23613B',
-    borderRadius: 48,
-    borderWidth: 2,
-    height: 104,
-    justifyContent: 'center',
-    width: 88,
-  },
-  mithuBodyCompact: { borderRadius: 30, height: 64, width: 54 },
-  mithuFace: {
-    alignItems: 'center',
-    backgroundColor: '#BCE0A7',
-    borderRadius: 22,
-    flexDirection: 'row',
-    gap: 12,
-    height: 40,
-    justifyContent: 'center',
-    width: 58,
-  },
-  mithuFaceCompact: { borderRadius: 14, gap: 7, height: 25, width: 36 },
-  eye: { backgroundColor: '#24324C', borderRadius: 5, height: 8, width: 8 },
-  beak: {
-    backgroundColor: '#F7B733',
-    borderBottomLeftRadius: 10,
-    borderBottomRightRadius: 10,
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
-    height: 18,
-    marginTop: -2,
-    width: 28,
-  },
-  beakCompact: { height: 10, width: 17 },
-  cheek: { backgroundColor: '#E7755F', borderRadius: 8, height: 10, marginTop: 5, opacity: 0.8, width: 18 },
-  cheekHappy: { width: 28 },
-  bunnyEar: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E88AA6',
-    borderRadius: 16,
-    borderWidth: 2,
-    height: 70,
-    overflow: 'hidden',
-    position: 'absolute',
-    top: 2,
-    width: 26,
-  },
-  bunnyEarLeft: { left: 28, transform: [{ rotate: '-8deg' }] },
-  bunnyEarRight: { left: 68, transform: [{ rotate: '8deg' }] },
-  bunnyEarCompact: { borderRadius: 10, height: 42, top: 0, width: 17 },
-  bunnyEarStripe: { height: 8, left: 2, position: 'absolute', right: 2 },
-  bunnyBody: {
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E88AA6',
-    borderRadius: 46,
-    borderWidth: 2,
-    height: 100,
-    justifyContent: 'center',
-    marginTop: 46,
-    width: 86,
-  },
-  bunnyBodyCompact: { borderRadius: 28, height: 62, marginTop: 28, width: 52 },
-  bunnyFace: {
-    alignItems: 'center',
-    backgroundColor: '#FDEAF0',
-    borderRadius: 20,
-    flexDirection: 'row',
-    gap: 12,
-    height: 36,
-    justifyContent: 'center',
-    width: 54,
-  },
-  bunnyFaceCompact: { borderRadius: 13, gap: 7, height: 23, width: 34 },
-  bunnyNose: { backgroundColor: '#E88AA6', borderRadius: 5, height: 10, marginTop: -2, width: 14 },
-  bunnyNoseCompact: { height: 7, width: 10 },
-  bunnyCheek: { backgroundColor: '#F7A8C4', borderRadius: 8, height: 10, marginTop: 5, opacity: 0.85, width: 18 },
-  bunnyCheekHappy: { width: 28 },
-  goluEar: {
-    backgroundColor: '#AEC6D8',
-    borderColor: '#6C93AC',
-    borderRadius: 30,
-    borderWidth: 2,
-    height: 64,
-    position: 'absolute',
-    top: 48,
-    width: 50,
-  },
-  goluEarLeft: { left: 2 },
-  goluEarRight: { left: 70 },
-  goluEarCompact: { borderRadius: 18, height: 40, left: 0, top: 30, width: 32 },
-  goluBody: {
-    alignItems: 'center',
-    backgroundColor: '#C9DCE8',
-    borderColor: '#6C93AC',
-    borderRadius: 44,
-    borderWidth: 2,
-    height: 100,
-    justifyContent: 'center',
-    width: 82,
-  },
-  goluBodyCompact: { borderRadius: 27, height: 62, width: 50 },
-  goluFace: {
-    alignItems: 'center',
-    backgroundColor: '#E4EEF4',
-    borderRadius: 20,
-    flexDirection: 'row',
-    gap: 12,
-    height: 36,
-    justifyContent: 'center',
-    width: 52,
-  },
-  goluFaceCompact: { borderRadius: 13, gap: 7, height: 23, width: 33 },
-  goluTrunk: {
-    backgroundColor: '#7FA3BE',
-    borderColor: '#4F7791',
-    borderBottomLeftRadius: 14,
-    borderBottomRightRadius: 4,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderWidth: 2,
-    height: 36,
-    marginTop: 2,
-    transform: [{ rotate: '14deg' }],
-    width: 16,
-  },
-  goluTrunkCompact: { height: 22, marginTop: 1, width: 10 },
-  goluCheek: { backgroundColor: '#F0C5A8', borderRadius: 8, height: 10, marginTop: 5, opacity: 0.85, width: 18 },
-  goluCheekHappy: { width: 28 },
+  mascotImage: { height: 122, resizeMode: 'contain', width: 122 },
+  mascotImageCompact: { height: 72, width: 72 },
   mascotBubble: {
     backgroundColor: '#FFFFFF',
     borderColor: '#DDE4EC',
