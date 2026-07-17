@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import * as Speech from 'expo-speech';
+import { useAudioPlayer } from 'expo-audio';
 import { useEffect, useState } from 'react';
 import {
   Image,
@@ -14,10 +15,18 @@ import {
 } from 'react-native';
 
 const PROGRESS_STORAGE_KEY = 'hindi-quest-progress';
+const REACTION_PAUSE_MS = 900;
+const MAX_SPEECH_WAIT_MS = 3000;
 
-function speakHindi(text: string) {
+function speakHindi(text: string, onDone?: () => void) {
   Speech.stop();
-  Speech.speak(text, { language: 'hi-IN', rate: 0.8 });
+  Speech.speak(text, {
+    language: 'hi-IN',
+    rate: 0.8,
+    onDone,
+    onStopped: onDone,
+    onError: onDone,
+  });
 }
 
 function shuffleItems<T>(items: T[]): T[] {
@@ -30,7 +39,7 @@ function shuffleItems<T>(items: T[]): T[] {
 }
 
 type Screen = 'onboarding' | 'home' | 'themes' | 'lesson' | 'match' | 'memory' | 'reward' | 'progress';
-type LearnerMode = 'Kid' | 'Adult' | 'Family';
+type LearnerMode = 'Kid' | 'Adult';
 type ItemStatus = 'new' | 'known' | 'practice';
 type CharacterId = 'mithu' | 'bunny' | 'golu';
 type CharacterMood = 'hello' | 'ready' | 'speak' | 'happy';
@@ -105,6 +114,19 @@ const characters: { id: CharacterId; name: string; subtitle: string }[] = [
 const CHARACTER_STORAGE_KEY = 'hindi-quest-character';
 
 export default function App() {
+  const successPlayer = useAudioPlayer(require('./assets/sounds/success.mp3'));
+  const failPlayer = useAudioPlayer(require('./assets/sounds/fail-buzz.mp3'));
+
+  function playSuccessSound() {
+    successPlayer.seekTo(0);
+    successPlayer.play();
+  }
+
+  function playFailSound() {
+    failPlayer.seekTo(0);
+    failPlayer.play();
+  }
+
   const [screen, setScreen] = useState<Screen>('onboarding');
   const [mode, setMode] = useState<LearnerMode>('Kid');
   const [showPronunciation, setShowPronunciation] = useState(false);
@@ -218,41 +240,53 @@ export default function App() {
     setSelectedAnswer(itemId);
 
     if (!isCorrect) {
+      playFailSound();
       setFeedback(`Try again. ${characterMeta.name} will play it once more.`);
       setProgress((prev) => ({ ...prev, [currentItem.id]: 'practice' }));
       setMissedThisLesson((prev) => (prev.includes(currentItem.id) ? prev : [...prev, currentItem.id]));
       return;
     }
 
+    playSuccessSound();
     setFeedback(`Nice! ${currentItem.hindi} means ${currentItem.meaning}.`);
     setProgress((prev) => ({ ...prev, [currentItem.id]: 'known' }));
-    speakHindi(currentItem.hindi);
 
-    setTimeout(() => {
-      if (matchIndex < promptOrder.length - 1) {
-        setMatchIndex((index) => index + 1);
-        setAnswerOrder(shuffleItems(themeItems));
+    let advanced = false;
+    const advanceToNext = () => {
+      if (advanced) return;
+      advanced = true;
+      setTimeout(() => {
+        if (matchIndex < promptOrder.length - 1) {
+          setMatchIndex((index) => index + 1);
+          setAnswerOrder(shuffleItems(themeItems));
+          setSelectedAnswer(null);
+          setFeedback('Tap what you hear.');
+          return;
+        }
+
+        if (!isReviewRound && missedThisLesson.length > 0) {
+          setIsReviewRound(true);
+          setMatchIndex(0);
+          setPromptOrder(shuffleItems(themeItems.filter((item) => missedThisLesson.includes(item.id))));
+          setAnswerOrder(shuffleItems(themeItems));
+          setSelectedAnswer(null);
+          setFeedback('Review round: let\'s try those tricky words again.');
+          return;
+        }
+
         setSelectedAnswer(null);
-        setFeedback('Tap what you hear.');
-        return;
-      }
+        setFeedback('Find the matching pairs.');
+        setMatchedCards([]);
+        setFlippedCards([]);
+        setScreen('memory');
+      }, REACTION_PAUSE_MS);
+    };
 
-      if (!isReviewRound && missedThisLesson.length > 0) {
-        setIsReviewRound(true);
-        setMatchIndex(0);
-        setPromptOrder(shuffleItems(themeItems.filter((item) => missedThisLesson.includes(item.id))));
-        setAnswerOrder(shuffleItems(themeItems));
-        setSelectedAnswer(null);
-        setFeedback('Review round: let\'s try those tricky words again.');
-        return;
-      }
-
-      setSelectedAnswer(null);
-      setFeedback('Find the matching pairs.');
-      setMatchedCards([]);
-      setFlippedCards([]);
-      setScreen('memory');
-    }, 700);
+    // Advance once the word finishes playing, but never wait longer than
+    // MAX_SPEECH_WAIT_MS in case the device has no Hindi voice installed
+    // and speech synthesis stalls instead of erroring out quickly.
+    speakHindi(currentItem.hindi, advanceToNext);
+    setTimeout(advanceToNext, MAX_SPEECH_WAIT_MS);
   }
 
   function handleCardPress(card: MemoryCard) {
@@ -276,12 +310,14 @@ export default function App() {
           const nextMatched = [...matchedCards, first.itemId];
           setMatchedCards(nextMatched);
           setFeedback('Pair found!');
+          playSuccessSound();
           if (nextMatched.length === 4) {
             setEarnedReward(`${characterMeta.name}'s ${activeTheme === 'colors' ? 'color palette' : 'picnic basket'}`);
             setScreen('reward');
           }
         } else {
           setFeedback('Not yet. Try another pair.');
+          playFailSound();
         }
         setFlippedCards([]);
       }, 600);
@@ -350,7 +386,7 @@ export default function App() {
             <View style={styles.panel}>
               <Text style={styles.sectionTitle}>Who is playing?</Text>
               <View style={styles.segmentRow}>
-                {(['Kid', 'Adult', 'Family'] as LearnerMode[]).map((option) => (
+                {(['Kid', 'Adult'] as LearnerMode[]).map((option) => (
                   <Pressable
                     key={option}
                     onPress={() => handleMode(option)}
