@@ -160,7 +160,7 @@ function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
 
 const themes: Theme[] = [
   { id: 'food', title: 'Food', subtitle: 'Learn tasty everyday words', status: 'ready', color: '#F7B733' },
-  { id: 'colors', title: 'Colors', subtitle: 'Paint with Hindi words', status: 'ready', color: '#78C6E7' },
+  { id: 'colors', title: 'Colors', subtitle: 'Paint with colorful words', status: 'ready', color: '#78C6E7' },
   { id: 'family', title: 'Family', subtitle: 'Words for people at home', status: 'ready', color: '#76B77C' },
   { id: 'sounds', title: 'Starter sounds', subtitle: 'Meet friendly Hindi letters', status: 'ready', color: '#E7755F' },
 ];
@@ -501,7 +501,7 @@ export default function App() {
         {screen === 'onboarding' && (
           <ScreenShell>
             <View style={styles.heroRow}>
-              <CharacterMascot character={character} mood="hello" />
+              <CharacterMascot character={character} mood="hello" language={language} />
               <View style={styles.heroCopy}>
                 <Text style={styles.kicker}>Meet {characterMeta.name}</Text>
                 <Text style={styles.title}>{languageMeta.name} Quest</Text>
@@ -544,7 +544,7 @@ export default function App() {
                     style={[styles.characterTile, character === option.id && styles.characterTileActive]}
                     accessibilityRole="button"
                   >
-                    <CharacterMascot character={option.id} mood="ready" compact />
+                    <CharacterMascot character={option.id} mood="ready" language={language} compact />
                     <Text style={styles.characterName}>{option.name}</Text>
                     <Text style={styles.characterSubtitle}>{option.subtitle}</Text>
                   </Pressable>
@@ -585,7 +585,7 @@ export default function App() {
                 <Text style={styles.title}>Play the Food lesson</Text>
                 <Text style={styles.subtitle}>Hear {languageMeta.name}, tap the right tile, and help {characterMeta.name} pack a picnic.</Text>
               </View>
-              <CharacterMascot character={character} mood="ready" />
+              <CharacterMascot character={character} mood="ready" language={language} />
             </View>
 
             <View style={styles.statsRow}>
@@ -609,7 +609,7 @@ export default function App() {
             <View style={styles.lessonHeader}>
               <View>
                 <Text style={styles.title}>Pick a theme</Text>
-                <Text style={styles.subtitle}>Start with Food, then unlock more Hindi worlds.</Text>
+                <Text style={styles.subtitle}>Start with Food, then unlock more {languageMeta.name} worlds.</Text>
               </View>
               <View style={styles.levelBadge}>
                 <Text style={styles.levelBadgeText}>Level {currentLevel(progress, language)}</Text>
@@ -656,7 +656,7 @@ export default function App() {
                 <Text style={styles.kicker}>{activeThemeMeta?.title ?? 'Food'} Game</Text>
                 <Text style={styles.title}>Learn {themeItems.length} {languageMeta.name} {themeUnitLabel[activeTheme]}</Text>
               </View>
-              <CharacterMascot character={character} mood="ready" compact />
+              <CharacterMascot character={character} mood="ready" language={language} compact />
             </View>
             <Text style={styles.subtitle}>Tap one to hear it. Then {characterMeta.name} will quiz you.</Text>
             <View style={styles.wordPreviewGrid}>
@@ -681,7 +681,7 @@ export default function App() {
               accessibilityRole="button"
               accessibilityLabel="Replay the word"
             >
-              <CharacterMascot character={character} mood="speak" compact />
+              <CharacterMascot character={character} mood="speak" language={language} compact />
               <View style={styles.soundCopy}>
                 <Text style={styles.instruction}>Tap what you hear.</Text>
                 <Text style={styles.promptWord}>{currentItem.word}</Text>
@@ -747,7 +747,7 @@ export default function App() {
         {screen === 'reward' && (
           <ScreenShell>
             <View style={styles.rewardPanel}>
-              <CharacterMascot character={character} mood="happy" />
+              <CharacterMascot character={character} mood="happy" language={language} />
               <Text style={styles.title}>You learned {languageMeta.name}!</Text>
               <Text style={styles.subtitle}>{themeItems.length} words practiced. Unlocked: {earnedReward}.</Text>
               <View style={styles.rewardBasket}>
@@ -851,20 +851,27 @@ const characterImages: Record<CharacterId, ImageSourcePropType> = {
   golu: require('./assets/characters/golu.png'),
 };
 
+const mascotMoodText: Record<LanguageId, Record<CharacterMood, string>> = {
+  hi: { hello: 'नमस्ते', speak: 'सुनो', happy: 'शाबाश', ready: 'चलो' },
+  ta: { hello: 'வணக்கம்', speak: 'கேளு', happy: 'சபாஷ்', ready: 'வா' },
+};
+
 function CharacterMascot({
   character,
   compact = false,
   mood,
+  language,
 }: {
   character: CharacterId;
   compact?: boolean;
   mood: CharacterMood;
+  language: LanguageId;
 }) {
   return (
     <View style={[styles.mascot, compact && styles.mascotCompact]}>
       <Image source={characterImages[character]} style={[styles.mascotImage, compact && styles.mascotImageCompact]} />
       <Text style={[styles.mascotBubble, compact && styles.mascotBubbleCompact]}>
-        {mood === 'hello' ? 'नमस्ते' : mood === 'speak' ? 'सुनो' : mood === 'happy' ? 'शाबाश' : 'चलो'}
+        {mascotMoodText[language][mood]}
       </Text>
     </View>
   );
