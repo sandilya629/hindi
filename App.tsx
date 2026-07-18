@@ -18,10 +18,17 @@ const PROGRESS_STORAGE_KEY = 'hindi-quest-progress';
 const REACTION_PAUSE_MS = 900;
 const MAX_SPEECH_WAIT_MS = 3000;
 
-function speakHindi(text: string, onDone?: () => void) {
+type LanguageId = 'hi' | 'ta';
+
+const languageVoiceCode: Record<LanguageId, string> = {
+  hi: 'hi-IN',
+  ta: 'ta-IN',
+};
+
+function speakWord(text: string, language: LanguageId, onDone?: () => void) {
   Speech.stop();
   Speech.speak(text, {
-    language: 'hi-IN',
+    language: languageVoiceCode[language],
     rate: 0.8,
     onDone,
     onStopped: onDone,
@@ -46,7 +53,8 @@ type CharacterMood = 'hello' | 'ready' | 'speak' | 'happy';
 
 type LessonItem = {
   id: string;
-  hindi: string;
+  word: string;
+  language: LanguageId;
   transliteration: string;
   meaning: string;
   theme: string;
@@ -71,23 +79,24 @@ type MemoryCard = {
   itemId: string;
   kind: 'sound' | 'meaning';
   label: string;
+  language: LanguageId;
 };
 
 const foodItems: LessonItem[] = [
-  { id: 'paani', hindi: 'पानी', transliteration: 'paani', meaning: 'water', theme: 'Food', color: '#78C6E7', emoji: '💧' },
-  { id: 'doodh', hindi: 'दूध', transliteration: 'doodh', meaning: 'milk', theme: 'Food', color: '#F6F1DF', emoji: '🥛' },
-  { id: 'aam', hindi: 'आम', transliteration: 'aam', meaning: 'mango', theme: 'Food', color: '#F7B733', emoji: '🥭' },
-  { id: 'roti', hindi: 'रोटी', transliteration: 'roti', meaning: 'flatbread', theme: 'Food', color: '#DFA45B', emoji: '🫓' },
-  { id: 'chawal', hindi: 'चावल', transliteration: 'chawal', meaning: 'rice', theme: 'Food', color: '#EEE7CF', emoji: '🍚' },
-  { id: 'kela', hindi: 'केला', transliteration: 'kela', meaning: 'banana', theme: 'Food', color: '#F5DE6E', emoji: '🍌' },
+  { id: 'paani', word: 'पानी', language: 'hi', transliteration: 'paani', meaning: 'water', theme: 'Food', color: '#78C6E7', emoji: '💧' },
+  { id: 'doodh', word: 'दूध', language: 'hi', transliteration: 'doodh', meaning: 'milk', theme: 'Food', color: '#F6F1DF', emoji: '🥛' },
+  { id: 'aam', word: 'आम', language: 'hi', transliteration: 'aam', meaning: 'mango', theme: 'Food', color: '#F7B733', emoji: '🥭' },
+  { id: 'roti', word: 'रोटी', language: 'hi', transliteration: 'roti', meaning: 'flatbread', theme: 'Food', color: '#DFA45B', emoji: '🫓' },
+  { id: 'chawal', word: 'चावल', language: 'hi', transliteration: 'chawal', meaning: 'rice', theme: 'Food', color: '#EEE7CF', emoji: '🍚' },
+  { id: 'kela', word: 'केला', language: 'hi', transliteration: 'kela', meaning: 'banana', theme: 'Food', color: '#F5DE6E', emoji: '🍌' },
 ];
 
 const colorItems: LessonItem[] = [
-  { id: 'laal', hindi: 'लाल', transliteration: 'laal', meaning: 'red', theme: 'Colors', color: '#D64545', emoji: '🔴' },
-  { id: 'neela', hindi: 'नीला', transliteration: 'neela', meaning: 'blue', theme: 'Colors', color: '#3E7CB1', emoji: '🔵' },
-  { id: 'peela', hindi: 'पीला', transliteration: 'peela', meaning: 'yellow', theme: 'Colors', color: '#F2C230', emoji: '🟡' },
-  { id: 'hara', hindi: 'हरा', transliteration: 'hara', meaning: 'green', theme: 'Colors', color: '#4CAF6D', emoji: '🟢' },
-  { id: 'kaala', hindi: 'काला', transliteration: 'kaala', meaning: 'black', theme: 'Colors', color: '#3A3A3A', emoji: '⚫' },
+  { id: 'laal', word: 'लाल', language: 'hi', transliteration: 'laal', meaning: 'red', theme: 'Colors', color: '#D64545', emoji: '🔴' },
+  { id: 'neela', word: 'नीला', language: 'hi', transliteration: 'neela', meaning: 'blue', theme: 'Colors', color: '#3E7CB1', emoji: '🔵' },
+  { id: 'peela', word: 'पीला', language: 'hi', transliteration: 'peela', meaning: 'yellow', theme: 'Colors', color: '#F2C230', emoji: '🟡' },
+  { id: 'hara', word: 'हरा', language: 'hi', transliteration: 'hara', meaning: 'green', theme: 'Colors', color: '#4CAF6D', emoji: '🟢' },
+  { id: 'kaala', word: 'काला', language: 'hi', transliteration: 'kaala', meaning: 'black', theme: 'Colors', color: '#3A3A3A', emoji: '⚫' },
 ];
 
 function itemsForTheme(themeId: ThemeId): LessonItem[] {
@@ -191,15 +200,15 @@ export default function App() {
 
   useEffect(() => {
     if (screen === 'match') {
-      speakHindi(currentItem.hindi);
+      speakWord(currentItem.word, currentItem.language);
     }
   }, [screen, matchIndex, isReviewRound]);
 
   useEffect(() => {
     if (screen === 'memory') {
       const cards: MemoryCard[] = itemsForTheme(activeTheme).slice(0, 4).flatMap((item) => [
-        { id: `${item.id}-sound`, itemId: item.id, kind: 'sound', label: item.hindi },
-        { id: `${item.id}-meaning`, itemId: item.id, kind: 'meaning', label: item.meaning },
+        { id: `${item.id}-sound`, itemId: item.id, kind: 'sound', label: item.word, language: item.language },
+        { id: `${item.id}-meaning`, itemId: item.id, kind: 'meaning', label: item.meaning, language: item.language },
       ]);
       setMemoryCards(shuffleItems(cards));
     }
@@ -280,7 +289,7 @@ export default function App() {
     }
 
     playSuccessSound();
-    setFeedback(`Nice! ${currentItem.hindi} means ${currentItem.meaning}.`);
+    setFeedback(`Nice! ${currentItem.word} means ${currentItem.meaning}.`);
     const nextProgress = { ...progress, [currentItem.id]: 'known' as ItemStatus };
     setProgress(nextProgress);
 
@@ -322,9 +331,9 @@ export default function App() {
     };
 
     // Advance once the word finishes playing, but never wait longer than
-    // MAX_SPEECH_WAIT_MS in case the device has no Hindi voice installed
-    // and speech synthesis stalls instead of erroring out quickly.
-    speakHindi(currentItem.hindi, advanceToNext);
+    // MAX_SPEECH_WAIT_MS in case the device has no voice installed for this
+    // language and speech synthesis stalls instead of erroring out quickly.
+    speakWord(currentItem.word, currentItem.language, advanceToNext);
     setTimeout(advanceToNext, MAX_SPEECH_WAIT_MS);
   }
 
@@ -334,7 +343,7 @@ export default function App() {
     }
 
     if (card.kind === 'sound') {
-      speakHindi(card.label);
+      speakWord(card.label, card.language);
     }
 
     const nextFlipped = [...flippedCards, card];
@@ -543,7 +552,7 @@ export default function App() {
             <Text style={styles.subtitle}>Tap a word to hear it. Then {characterMeta.name} will quiz you.</Text>
             <View style={styles.wordPreviewGrid}>
               {themeItems.map((item) => (
-                <WordPreview key={item.id} item={item} showPronunciation={adultSupport} onPress={() => speakHindi(item.hindi)} />
+                <WordPreview key={item.id} item={item} showPronunciation={adultSupport} onPress={() => speakWord(item.word, item.language)} />
               ))}
             </View>
             <PrimaryButton label="Play" onPress={startLesson} />
@@ -559,14 +568,14 @@ export default function App() {
             </View>
             <Pressable
               style={styles.soundCard}
-              onPress={() => speakHindi(currentItem.hindi)}
+              onPress={() => speakWord(currentItem.word, currentItem.language)}
               accessibilityRole="button"
-              accessibilityLabel="Replay the Hindi word"
+              accessibilityLabel="Replay the word"
             >
               <CharacterMascot character={character} mood="speak" compact />
               <View style={styles.soundCopy}>
                 <Text style={styles.instruction}>Tap what you hear.</Text>
-                <Text style={styles.promptWord}>{currentItem.hindi}</Text>
+                <Text style={styles.promptWord}>{currentItem.word}</Text>
                 {adultSupport ? <Text style={styles.promptHelp}>{currentItem.transliteration}</Text> : null}
                 <Text style={styles.replayHint}>Tap to hear again</Text>
               </View>
@@ -585,7 +594,7 @@ export default function App() {
                     accessibilityRole="button"
                   >
                     <FoodVisual item={item} />
-                    <Text style={styles.answerHindi}>{item.hindi}</Text>
+                    <Text style={styles.answerHindi}>{item.word}</Text>
                     <Text style={styles.answerMeaning}>{item.meaning}</Text>
                   </Pressable>
                 );
@@ -661,7 +670,7 @@ export default function App() {
                 <View key={item.id} style={styles.progressRow}>
                   <FoodVisual item={item} small />
                   <View style={styles.progressCopy}>
-                    <Text style={styles.progressHindi}>{item.hindi} · {item.meaning}</Text>
+                    <Text style={styles.progressHindi}>{item.word} · {item.meaning}</Text>
                     <Text style={styles.progressMeta}>{item.transliteration}</Text>
                   </View>
                   <Text style={progress[item.id] === 'known' ? styles.knownPill : styles.practicePill}>
@@ -718,9 +727,9 @@ function WordPreview({
   onPress: () => void;
 }) {
   return (
-    <Pressable style={styles.wordPreview} onPress={onPress} accessibilityRole="button" accessibilityLabel={`Hear ${item.hindi}`}>
+    <Pressable style={styles.wordPreview} onPress={onPress} accessibilityRole="button" accessibilityLabel={`Hear ${item.word}`}>
       <FoodVisual item={item} />
-      <Text style={styles.previewHindi}>{item.hindi}</Text>
+      <Text style={styles.previewHindi}>{item.word}</Text>
       {showPronunciation ? <Text style={styles.previewMeta}>{item.transliteration}</Text> : null}
       <Text style={styles.previewMeaning}>{item.meaning}</Text>
     </Pressable>
