@@ -65,7 +65,7 @@ type LessonItem = {
   emoji: string;
 };
 
-type ThemeId = 'food' | 'colors' | 'family' | 'sounds';
+type ThemeId = 'food' | 'colors' | 'family' | 'sounds' | 'animals' | 'numbers' | 'body';
 
 type Theme = {
   id: string;
@@ -157,6 +157,37 @@ const soundItems: LessonItem[] = [
   { id: 'ha', word: 'ह', language: 'hi', transliteration: 'ha', meaning: 'sound "ha"', theme: 'Starter sounds', color: '#D8B98A', emoji: 'ह' },
 ];
 
+const animalItems: LessonItem[] = [
+  { id: 'kutta', word: 'कुत्ता', language: 'hi', transliteration: 'kutta', meaning: 'dog', theme: 'Animals', color: '#D4A574', emoji: '🐶' },
+  { id: 'billi', word: 'बिल्ली', language: 'hi', transliteration: 'billi', meaning: 'cat', theme: 'Animals', color: '#E8C9A0', emoji: '🐱' },
+  { id: 'haathi', word: 'हाथी', language: 'hi', transliteration: 'haathi', meaning: 'elephant', theme: 'Animals', color: '#A8B4C0', emoji: '🐘' },
+  { id: 'sher', word: 'शेर', language: 'hi', transliteration: 'sher', meaning: 'lion', theme: 'Animals', color: '#F2B84B', emoji: '🦁' },
+  { id: 'khargosh', word: 'खरगोश', language: 'hi', transliteration: 'khargosh', meaning: 'rabbit', theme: 'Animals', color: '#EAD9E8', emoji: '🐰' },
+  { id: 'chidiya', word: 'चिड़िया', language: 'hi', transliteration: 'chidiya', meaning: 'bird', theme: 'Animals', color: '#8FD0C4', emoji: '🐦' },
+];
+
+const numberItems: LessonItem[] = [
+  { id: 'ek', word: 'एक', language: 'hi', transliteration: 'ek', meaning: '1', theme: 'Numbers', color: '#9B8FD9', emoji: '1️⃣' },
+  { id: 'do', word: 'दो', language: 'hi', transliteration: 'do', meaning: '2', theme: 'Numbers', color: '#8FA0D9', emoji: '2️⃣' },
+  { id: 'teen', word: 'तीन', language: 'hi', transliteration: 'teen', meaning: '3', theme: 'Numbers', color: '#8FB8D9', emoji: '3️⃣' },
+  { id: 'chaar', word: 'चार', language: 'hi', transliteration: 'chaar', meaning: '4', theme: 'Numbers', color: '#8FCCD9', emoji: '4️⃣' },
+  { id: 'paanch', word: 'पाँच', language: 'hi', transliteration: 'paanch', meaning: '5', theme: 'Numbers', color: '#8FD9CC', emoji: '5️⃣' },
+  { id: 'chhah', word: 'छह', language: 'hi', transliteration: 'chhah', meaning: '6', theme: 'Numbers', color: '#A0D98F', emoji: '6️⃣' },
+  { id: 'saat', word: 'सात', language: 'hi', transliteration: 'saat', meaning: '7', theme: 'Numbers', color: '#D9CC8F', emoji: '7️⃣' },
+  { id: 'aath', word: 'आठ', language: 'hi', transliteration: 'aath', meaning: '8', theme: 'Numbers', color: '#D9A88F', emoji: '8️⃣' },
+  { id: 'nau', word: 'नौ', language: 'hi', transliteration: 'nau', meaning: '9', theme: 'Numbers', color: '#D98FA0', emoji: '9️⃣' },
+  { id: 'das', word: 'दस', language: 'hi', transliteration: 'das', meaning: '10', theme: 'Numbers', color: '#C08FD9', emoji: '🔟' },
+];
+
+const bodyItems: LessonItem[] = [
+  { id: 'aankh', word: 'आँख', language: 'hi', transliteration: 'aankh', meaning: 'eye', theme: 'Body', color: '#F2A6C4', emoji: '👁️' },
+  { id: 'naak', word: 'नाक', language: 'hi', transliteration: 'naak', meaning: 'nose', theme: 'Body', color: '#F7C6D9', emoji: '👃' },
+  { id: 'kaan', word: 'कान', language: 'hi', transliteration: 'kaan', meaning: 'ear', theme: 'Body', color: '#F2B8CC', emoji: '👂' },
+  { id: 'haath', word: 'हाथ', language: 'hi', transliteration: 'haath', meaning: 'hand', theme: 'Body', color: '#EDA6D4', emoji: '✋' },
+  { id: 'pair', word: 'पैर', language: 'hi', transliteration: 'pair', meaning: 'foot', theme: 'Body', color: '#E8A6E0', emoji: '🦶' },
+  { id: 'munh', word: 'मुँह', language: 'hi', transliteration: 'munh', meaning: 'mouth', theme: 'Body', color: '#F2A6AC', emoji: '👄' },
+];
+
 // NOTE: sourced from common, well-established everyday Tamil vocabulary,
 // but not yet checked by a native speaker. Flagged for review before use
 // with real families. IDs are prefixed (ta_*) since the transliterations
@@ -185,6 +216,9 @@ function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
   if (themeId === 'colors') return colorItems;
   if (themeId === 'family') return familyItems;
   if (themeId === 'sounds') return soundItems;
+  if (themeId === 'animals') return animalItems;
+  if (themeId === 'numbers') return numberItems;
+  if (themeId === 'body') return bodyItems;
   return foodItems;
 }
 
@@ -193,11 +227,14 @@ const themes: Theme[] = [
   { id: 'colors', title: 'Colors', subtitle: 'Paint with colorful words', status: 'ready', color: '#78C6E7' },
   { id: 'family', title: 'Family', subtitle: 'Words for people at home', status: 'ready', color: '#76B77C' },
   { id: 'sounds', title: 'Starter sounds', subtitle: 'Meet friendly letters', status: 'ready', color: '#E7755F' },
+  { id: 'animals', title: 'Animals', subtitle: 'Meet furry, feathery friends', status: 'ready', color: '#D4A574' },
+  { id: 'numbers', title: 'Numbers', subtitle: 'Count from one to ten', status: 'ready', color: '#9B8FD9' },
+  { id: 'body', title: 'Body', subtitle: 'Learn parts of the body', status: 'ready', color: '#F2A6C4' },
 ];
 
 // Order in which themes unlock. Themes with no real content yet (status
 // 'soon') aren't part of this sequence — they stay locked regardless.
-const themeUnlockOrder: ThemeId[] = ['food', 'colors', 'family', 'sounds'];
+const themeUnlockOrder: ThemeId[] = ['food', 'colors', 'family', 'sounds', 'animals', 'numbers', 'body'];
 
 function isThemeMastered(themeId: ThemeId, progress: Progress, language: LanguageId): boolean {
   const items = itemsForTheme(themeId, language);
@@ -223,6 +260,9 @@ const themeRewardName: Record<ThemeId, string> = {
   colors: 'color palette',
   family: 'family photo album',
   sounds: 'sound chart',
+  animals: 'animal sticker book',
+  numbers: 'counting chart',
+  body: 'body map poster',
 };
 
 const themeUnitLabel: Record<ThemeId, string> = {
@@ -230,10 +270,13 @@ const themeUnitLabel: Record<ThemeId, string> = {
   colors: 'words',
   family: 'words',
   sounds: 'sounds',
+  animals: 'words',
+  numbers: 'numbers',
+  body: 'words',
 };
 
 const initialProgress: Progress = Object.fromEntries(
-  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...tamilFoodItems, ...tamilColorItems, ...tamilFamilyItems, ...tamilSoundItems].map((item) => [item.id, 'new']),
+  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...animalItems, ...numberItems, ...bodyItems, ...tamilFoodItems, ...tamilColorItems, ...tamilFamilyItems, ...tamilSoundItems].map((item) => [item.id, 'new']),
 ) as Progress;
 
 const characters: { id: CharacterId; name: string; subtitle: string }[] = [
