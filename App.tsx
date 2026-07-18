@@ -15,8 +15,9 @@ import {
 } from 'react-native';
 
 const PROGRESS_STORAGE_KEY = 'hindi-quest-progress';
-const REACTION_PAUSE_MS = 900;
+const REACTION_PAUSE_MS = 1800;
 const MAX_SPEECH_WAIT_MS = 3000;
+const SPEECH_RATE = 0.65;
 
 type LanguageId = 'hi' | 'ta';
 
@@ -29,7 +30,7 @@ function speakWord(text: string, language: LanguageId, onDone?: () => void) {
   Speech.stop();
   Speech.speak(text, {
     language: languageVoiceCode[language],
-    rate: 0.8,
+    rate: SPEECH_RATE,
     onDone,
     onStopped: onDone,
     onError: onDone,
