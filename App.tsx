@@ -46,7 +46,6 @@ function shuffleItems<T>(items: T[]): T[] {
 }
 
 type Screen = 'onboarding' | 'home' | 'themes' | 'lesson' | 'match' | 'memory' | 'reward' | 'progress';
-type LearnerMode = 'Kid' | 'Adult';
 type ItemStatus = 'new' | 'known' | 'practice';
 type CharacterId = 'mithu' | 'bunny' | 'golu';
 type CharacterMood = 'hello' | 'ready' | 'speak' | 'happy';
@@ -143,6 +142,13 @@ const characters: { id: CharacterId; name: string; subtitle: string }[] = [
 
 const CHARACTER_STORAGE_KEY = 'hindi-quest-character';
 
+const languages: { id: LanguageId; name: string; ready: boolean }[] = [
+  { id: 'hi', name: 'Hindi', ready: true },
+  { id: 'ta', name: 'Tamil', ready: false },
+];
+
+const LANGUAGE_STORAGE_KEY = 'hindi-quest-language';
+
 export default function App() {
   const successPlayer = useAudioPlayer(require('./assets/sounds/success.mp3'));
   const failPlayer = useAudioPlayer(require('./assets/sounds/fail-buzz.mp3'));
@@ -158,7 +164,8 @@ export default function App() {
   }
 
   const [screen, setScreen] = useState<Screen>('onboarding');
-  const [mode, setMode] = useState<LearnerMode>('Kid');
+  const [language, setLanguage] = useState<LanguageId>('hi');
+  const [isLanguageLoaded, setIsLanguageLoaded] = useState(false);
   const [showPronunciation, setShowPronunciation] = useState(false);
   const [progress, setProgress] = useState<Progress>(initialProgress);
   const [matchIndex, setMatchIndex] = useState(0);
@@ -182,6 +189,7 @@ export default function App() {
   const themeItems = itemsForTheme(activeTheme);
   const activeThemeMeta = themes.find((theme) => theme.id === activeTheme);
   const characterMeta = characters.find((entry) => entry.id === character) ?? characters[0];
+  const languageMeta = languages.find((entry) => entry.id === language) ?? languages[0];
   const masteryMessage = (() => {
     if (!justMasteredTheme) return null;
     const masteredMeta = themes.find((theme) => theme.id === justMasteredTheme);
@@ -196,7 +204,7 @@ export default function App() {
   const themeLearnedCount = themeItems.filter((item) => progress[item.id] === 'known').length;
   const themePracticeCount = themeItems.filter((item) => progress[item.id] === 'practice').length;
   const currentItem = promptOrder[matchIndex] ?? promptOrder[0] ?? themeItems[0];
-  const adultSupport = mode !== 'Kid' || showPronunciation;
+  const adultSupport = showPronunciation;
 
   useEffect(() => {
     if (screen === 'match') {
@@ -256,6 +264,25 @@ export default function App() {
     AsyncStorage.setItem(CHARACTER_STORAGE_KEY, character);
   }, [character, isCharacterLoaded]);
 
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(LANGUAGE_STORAGE_KEY).then((stored) => {
+      if (cancelled) return;
+      if (stored === 'hi' || stored === 'ta') {
+        setLanguage(stored);
+      }
+      setIsLanguageLoaded(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isLanguageLoaded) return;
+    AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  }, [language, isLanguageLoaded]);
+
   function startLesson() {
     setMatchIndex(0);
     setAttempts({});
@@ -267,11 +294,6 @@ export default function App() {
     setPromptOrder(shuffleItems(themeItems));
     setAnswerOrder(shuffleItems(themeItems));
     setScreen('match');
-  }
-
-  function handleMode(nextMode: LearnerMode) {
-    setMode(nextMode);
-    setShowPronunciation(nextMode !== 'Kid');
   }
 
   function handleAnswer(itemId: string) {
@@ -396,7 +418,7 @@ export default function App() {
             <Pressable style={styles.topLink} onPress={() => setScreen('home')} accessibilityRole="button">
               <Text style={styles.topLinkText}>Home</Text>
             </Pressable>
-            <Text style={styles.brandSmall}>Hindi Quest</Text>
+            <Text style={styles.brandSmall}>{languageMeta.name} Quest</Text>
             <Pressable style={styles.topLink} onPress={() => setScreen('progress')} accessibilityRole="button">
               <Text style={styles.topLinkText}>Progress</Text>
             </Pressable>
@@ -409,9 +431,31 @@ export default function App() {
               <CharacterMascot character={character} mood="hello" />
               <View style={styles.heroCopy}>
                 <Text style={styles.kicker}>Meet {characterMeta.name}</Text>
-                <Text style={styles.title}>Hindi Quest</Text>
-                <Text style={styles.subtitle}>Learn Hindi through quick, happy games.</Text>
+                <Text style={styles.title}>{languageMeta.name} Quest</Text>
+                <Text style={styles.subtitle}>Learn {languageMeta.name} through quick, happy games.</Text>
               </View>
+            </View>
+
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>Choose your language</Text>
+              <View style={styles.segmentRow}>
+                {languages.map((option) => (
+                  <Pressable
+                    key={option.id}
+                    onPress={() => setLanguage(option.id)}
+                    style={[styles.segment, language === option.id && styles.segmentActive]}
+                    accessibilityRole="button"
+                  >
+                    <Text style={[styles.segmentText, language === option.id && styles.segmentTextActive]}>{option.name}</Text>
+                    {!option.ready ? <Text style={styles.segmentSoon}>Coming soon</Text> : null}
+                  </Pressable>
+                ))}
+              </View>
+              {!languageMeta.ready ? (
+                <Text style={styles.helperText}>
+                  Tamil lessons are on their way. Switch back to Hindi to start playing today.
+                </Text>
+              ) : null}
             </View>
 
             <View style={styles.panel}>
@@ -433,20 +477,6 @@ export default function App() {
             </View>
 
             <View style={styles.panel}>
-              <Text style={styles.sectionTitle}>Who is playing?</Text>
-              <View style={styles.segmentRow}>
-                {(['Kid', 'Adult'] as LearnerMode[]).map((option) => (
-                  <Pressable
-                    key={option}
-                    onPress={() => handleMode(option)}
-                    style={[styles.segment, mode === option && styles.segmentActive]}
-                    accessibilityRole="button"
-                  >
-                    <Text style={[styles.segmentText, mode === option && styles.segmentTextActive]}>{option}</Text>
-                  </Pressable>
-                ))}
-              </View>
-
               <Pressable
                 style={styles.toggleRow}
                 onPress={() => setShowPronunciation((value) => !value)}
@@ -459,8 +489,11 @@ export default function App() {
                 <Text style={styles.toggleText}>Show pronunciation help</Text>
               </Pressable>
 
-              <Text style={styles.helperText}>Turn sound on. {characterMeta.name} will say each Hindi word.</Text>
-              <PrimaryButton label="Start" onPress={() => setScreen('home')} />
+              <Text style={styles.helperText}>Turn sound on. {characterMeta.name} will say each {languageMeta.name} word.</Text>
+              <PrimaryButton
+                label={languageMeta.ready ? 'Start' : 'Select Hindi to start'}
+                onPress={() => languageMeta.ready && setScreen('home')}
+              />
             </View>
           </ScreenShell>
         )}
@@ -472,9 +505,9 @@ export default function App() {
             </View>
             <View style={styles.homeHero}>
               <View style={styles.heroCopyWide}>
-                <Text style={styles.kicker}>Ready for a quick Hindi game?</Text>
+                <Text style={styles.kicker}>Ready for a quick {languageMeta.name} game?</Text>
                 <Text style={styles.title}>Play the Food lesson</Text>
-                <Text style={styles.subtitle}>Hear Hindi, tap the right tile, and help {characterMeta.name} pack a picnic.</Text>
+                <Text style={styles.subtitle}>Hear {languageMeta.name}, tap the right tile, and help {characterMeta.name} pack a picnic.</Text>
               </View>
               <CharacterMascot character={character} mood="ready" />
             </View>
@@ -659,7 +692,7 @@ export default function App() {
 
         {screen === 'progress' && (
           <ScreenShell>
-            <Text style={styles.title}>Your Hindi progress</Text>
+            <Text style={styles.title}>Your {languageMeta.name} progress</Text>
             <Text style={styles.subtitle}>{activeThemeMeta?.title ?? 'Food'} words · a simple view for parents and adult learners.</Text>
             <View style={styles.statsRow}>
               <StatCard label="Words learned" value={`${themeLearnedCount}`} />
@@ -829,6 +862,7 @@ const styles = StyleSheet.create({
   segmentActive: { backgroundColor: '#24324C', borderColor: '#24324C' },
   segmentText: { color: '#334155', fontSize: 15, fontWeight: '800' },
   segmentTextActive: { color: '#FFFFFF' },
+  segmentSoon: { color: '#8C5B10', fontSize: 11, fontWeight: '800', marginTop: 2, textAlign: 'center' },
   characterRow: { flexDirection: 'row', gap: 8 },
   characterTile: {
     alignItems: 'center',
