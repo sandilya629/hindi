@@ -94,6 +94,18 @@ const foodItems: LessonItem[] = [
   { id: 'kela', word: 'केला', language: 'hi', transliteration: 'kela', meaning: 'banana', theme: 'Food', color: '#F5DE6E', emoji: '🍌' },
 ];
 
+// NOTE: sourced from common, well-established everyday Tamil vocabulary,
+// but not yet checked by a native speaker. Flagged for review before use
+// with real families.
+const tamilFoodItems: LessonItem[] = [
+  { id: 'thanneer', word: 'தண்ணீர்', language: 'ta', transliteration: 'thanneer', meaning: 'water', theme: 'Food', color: '#78C6E7', emoji: '💧' },
+  { id: 'paal', word: 'பால்', language: 'ta', transliteration: 'paal', meaning: 'milk', theme: 'Food', color: '#F6F1DF', emoji: '🥛' },
+  { id: 'maampazham', word: 'மாம்பழம்', language: 'ta', transliteration: 'maampazham', meaning: 'mango', theme: 'Food', color: '#F7B733', emoji: '🥭' },
+  { id: 'rotti', word: 'ரொட்டி', language: 'ta', transliteration: 'rotti', meaning: 'flatbread', theme: 'Food', color: '#DFA45B', emoji: '🫓' },
+  { id: 'arisi', word: 'அரிசி', language: 'ta', transliteration: 'arisi', meaning: 'rice', theme: 'Food', color: '#EEE7CF', emoji: '🍚' },
+  { id: 'vaazhaipazham', word: 'வாழைப்பழம்', language: 'ta', transliteration: 'vaazhaipazham', meaning: 'banana', theme: 'Food', color: '#F5DE6E', emoji: '🍌' },
+];
+
 const colorItems: LessonItem[] = [
   { id: 'laal', word: 'लाल', language: 'hi', transliteration: 'laal', meaning: 'red', theme: 'Colors', color: '#D64545', emoji: '🔴' },
   { id: 'neela', word: 'नीला', language: 'hi', transliteration: 'neela', meaning: 'blue', theme: 'Colors', color: '#3E7CB1', emoji: '🔵' },
@@ -123,7 +135,10 @@ const soundItems: LessonItem[] = [
   { id: 'ha', word: 'ह', language: 'hi', transliteration: 'ha', meaning: 'sound "ha"', theme: 'Starter sounds', color: '#D8B98A', emoji: 'ह' },
 ];
 
-function itemsForTheme(themeId: ThemeId): LessonItem[] {
+function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
+  if (language === 'ta') {
+    return themeId === 'food' ? tamilFoodItems : [];
+  }
   if (themeId === 'colors') return colorItems;
   if (themeId === 'family') return familyItems;
   if (themeId === 'sounds') return soundItems;
@@ -141,21 +156,23 @@ const themes: Theme[] = [
 // 'soon') aren't part of this sequence — they stay locked regardless.
 const themeUnlockOrder: ThemeId[] = ['food', 'colors', 'family', 'sounds'];
 
-function isThemeMastered(themeId: ThemeId, progress: Progress): boolean {
-  return itemsForTheme(themeId).every((item) => progress[item.id] === 'known');
+function isThemeMastered(themeId: ThemeId, progress: Progress, language: LanguageId): boolean {
+  const items = itemsForTheme(themeId, language);
+  return items.length > 0 && items.every((item) => progress[item.id] === 'known');
 }
 
 type ThemePlayability = 'ready' | 'locked' | 'soon';
 
-function themePlayability(theme: Theme, progress: Progress): ThemePlayability {
+function themePlayability(theme: Theme, progress: Progress, language: LanguageId): ThemePlayability {
   if (theme.status === 'soon') return 'soon';
+  if (itemsForTheme(theme.id as ThemeId, language).length === 0) return 'soon';
   const index = themeUnlockOrder.indexOf(theme.id as ThemeId);
   if (index <= 0) return 'ready';
-  return isThemeMastered(themeUnlockOrder[index - 1], progress) ? 'ready' : 'locked';
+  return isThemeMastered(themeUnlockOrder[index - 1], progress, language) ? 'ready' : 'locked';
 }
 
-function currentLevel(progress: Progress): number {
-  return 1 + themeUnlockOrder.filter((id) => isThemeMastered(id, progress)).length;
+function currentLevel(progress: Progress, language: LanguageId): number {
+  return 1 + themeUnlockOrder.filter((id) => isThemeMastered(id, progress, language)).length;
 }
 
 const themeRewardName: Record<ThemeId, string> = {
@@ -173,7 +190,7 @@ const themeUnitLabel: Record<ThemeId, string> = {
 };
 
 const initialProgress: Progress = Object.fromEntries(
-  [...foodItems, ...colorItems, ...familyItems, ...soundItems].map((item) => [item.id, 'new']),
+  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...tamilFoodItems].map((item) => [item.id, 'new']),
 ) as Progress;
 
 const characters: { id: CharacterId; name: string; subtitle: string }[] = [
@@ -186,7 +203,7 @@ const CHARACTER_STORAGE_KEY = 'hindi-quest-character';
 
 const languages: { id: LanguageId; name: string; ready: boolean }[] = [
   { id: 'hi', name: 'Hindi', ready: true },
-  { id: 'ta', name: 'Tamil', ready: false },
+  { id: 'ta', name: 'Tamil', ready: true },
 ];
 
 const LANGUAGE_STORAGE_KEY = 'hindi-quest-language';
@@ -228,7 +245,7 @@ export default function App() {
   const [answerOrder, setAnswerOrder] = useState<LessonItem[]>([]);
   const [memoryCards, setMemoryCards] = useState<MemoryCard[]>([]);
 
-  const themeItems = itemsForTheme(activeTheme);
+  const themeItems = itemsForTheme(activeTheme, language);
   const activeThemeMeta = themes.find((theme) => theme.id === activeTheme);
   const characterMeta = characters.find((entry) => entry.id === character) ?? characters[0];
   const languageMeta = languages.find((entry) => entry.id === language) ?? languages[0];
@@ -241,8 +258,9 @@ export default function App() {
       ? `You mastered ${masteredMeta?.title}! ${nextMeta.title} is now unlocked.`
       : `You mastered ${masteredMeta?.title}!`;
   })();
-  const foodLearnedCount = foodItems.filter((item) => progress[item.id] === 'known').length;
-  const foodPracticeCount = foodItems.filter((item) => progress[item.id] === 'practice').length;
+  const homeThemeItems = itemsForTheme('food', language);
+  const foodLearnedCount = homeThemeItems.filter((item) => progress[item.id] === 'known').length;
+  const foodPracticeCount = homeThemeItems.filter((item) => progress[item.id] === 'practice').length;
   const themeLearnedCount = themeItems.filter((item) => progress[item.id] === 'known').length;
   const themePracticeCount = themeItems.filter((item) => progress[item.id] === 'practice').length;
   const currentItem = promptOrder[matchIndex] ?? promptOrder[0] ?? themeItems[0];
@@ -256,13 +274,13 @@ export default function App() {
 
   useEffect(() => {
     if (screen === 'memory') {
-      const cards: MemoryCard[] = itemsForTheme(activeTheme).slice(0, 4).flatMap((item) => [
+      const cards: MemoryCard[] = itemsForTheme(activeTheme, language).slice(0, 4).flatMap((item) => [
         { id: `${item.id}-sound`, itemId: item.id, kind: 'sound', label: item.word, language: item.language },
         { id: `${item.id}-meaning`, itemId: item.id, kind: 'meaning', label: item.meaning, language: item.language },
       ]);
       setMemoryCards(shuffleItems(cards));
     }
-  }, [screen, activeTheme]);
+  }, [screen, activeTheme, language]);
 
   useEffect(() => {
     let cancelled = false;
@@ -357,8 +375,8 @@ export default function App() {
     const nextProgress = { ...progress, [currentItem.id]: 'known' as ItemStatus };
     setProgress(nextProgress);
 
-    const wasMastered = isThemeMastered(activeTheme, progress);
-    const isMasteredNow = isThemeMastered(activeTheme, nextProgress);
+    const wasMastered = isThemeMastered(activeTheme, progress, language);
+    const isMasteredNow = isThemeMastered(activeTheme, nextProgress, language);
     if (!wasMastered && isMasteredNow) {
       setJustMasteredTheme(activeTheme);
     }
@@ -484,7 +502,10 @@ export default function App() {
                 {languages.map((option) => (
                   <Pressable
                     key={option.id}
-                    onPress={() => setLanguage(option.id)}
+                    onPress={() => {
+                      setLanguage(option.id);
+                      setActiveTheme('food');
+                    }}
                     style={[styles.segment, language === option.id && styles.segmentActive]}
                     accessibilityRole="button"
                   >
@@ -543,7 +564,7 @@ export default function App() {
         {screen === 'home' && (
           <ScreenShell>
             <View style={styles.levelBadge}>
-              <Text style={styles.levelBadgeText}>Level {currentLevel(progress)}</Text>
+              <Text style={styles.levelBadgeText}>Level {currentLevel(progress, language)}</Text>
             </View>
             <View style={styles.homeHero}>
               <View style={styles.heroCopyWide}>
@@ -555,7 +576,7 @@ export default function App() {
             </View>
 
             <View style={styles.statsRow}>
-              <StatCard label="Words learned" value={`${foodLearnedCount}/${foodItems.length}`} />
+              <StatCard label="Words learned" value={`${foodLearnedCount}/${homeThemeItems.length}`} />
               <StatCard label="Needs practice" value={`${foodPracticeCount}`} />
             </View>
 
@@ -578,13 +599,13 @@ export default function App() {
                 <Text style={styles.subtitle}>Start with Food, then unlock more Hindi worlds.</Text>
               </View>
               <View style={styles.levelBadge}>
-                <Text style={styles.levelBadgeText}>Level {currentLevel(progress)}</Text>
+                <Text style={styles.levelBadgeText}>Level {currentLevel(progress, language)}</Text>
               </View>
             </View>
             <View style={styles.themeGrid}>
               {themes.map((theme, index) => {
-                const playability = themePlayability(theme, progress);
-                const items = playability === 'ready' ? itemsForTheme(theme.id as ThemeId) : [];
+                const playability = themePlayability(theme, progress, language);
+                const items = playability === 'ready' ? itemsForTheme(theme.id as ThemeId, language) : [];
                 const learned = items.filter((item) => progress[item.id] === 'known').length;
                 const prevTheme = themes[index - 1];
                 return (
@@ -682,7 +703,7 @@ export default function App() {
           <ScreenShell>
             <Text style={styles.kicker}>Memory Pairs</Text>
             <Text style={styles.title}>Find the matching pairs</Text>
-            <Text style={styles.subtitle}>Match the Hindi word with its meaning.</Text>
+            <Text style={styles.subtitle}>Match the {languageMeta.name} word with its meaning.</Text>
             <Text style={styles.feedbackText}>{feedback}</Text>
             <View style={styles.memoryGrid}>
               {memoryCards.map((card) => {
@@ -714,7 +735,7 @@ export default function App() {
           <ScreenShell>
             <View style={styles.rewardPanel}>
               <CharacterMascot character={character} mood="happy" />
-              <Text style={styles.title}>You learned Hindi!</Text>
+              <Text style={styles.title}>You learned {languageMeta.name}!</Text>
               <Text style={styles.subtitle}>{themeItems.length} words practiced. Unlocked: {earnedReward}.</Text>
               <View style={styles.rewardBasket}>
                 {themeItems.slice(0, 4).map((item) => (
