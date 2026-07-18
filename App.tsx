@@ -157,11 +157,29 @@ const soundItems: LessonItem[] = [
   { id: 'ha', word: 'ह', language: 'hi', transliteration: 'ha', meaning: 'sound "ha"', theme: 'Starter sounds', color: '#D8B98A', emoji: 'ह' },
 ];
 
+// NOTE: sourced from common, well-established everyday Tamil vocabulary,
+// but not yet checked by a native speaker. Flagged for review before use
+// with real families. IDs are prefixed (ta_*) since the transliterations
+// match Hindi's sound ids and would otherwise collide in shared progress.
+const tamilSoundItems: LessonItem[] = [
+  { id: 'ta_a', word: 'அ', language: 'ta', transliteration: 'a', meaning: 'sound "a"', theme: 'Starter sounds', color: '#F7B733', emoji: 'அ' },
+  { id: 'ta_aa', word: 'ஆ', language: 'ta', transliteration: 'aa', meaning: 'sound "aa"', theme: 'Starter sounds', color: '#6EC6DE', emoji: 'ஆ' },
+  { id: 'ta_ka', word: 'க', language: 'ta', transliteration: 'ka', meaning: 'sound "ka"', theme: 'Starter sounds', color: '#7FC77E', emoji: 'க' },
+  { id: 'ta_ma', word: 'ம', language: 'ta', transliteration: 'ma', meaning: 'sound "ma"', theme: 'Starter sounds', color: '#E88A73', emoji: 'ம' },
+  { id: 'ta_pa', word: 'ப', language: 'ta', transliteration: 'pa', meaning: 'sound "pa"', theme: 'Starter sounds', color: '#C9A0E0', emoji: 'ப' },
+  { id: 'ta_na', word: 'ந', language: 'ta', transliteration: 'na', meaning: 'sound "na"', theme: 'Starter sounds', color: '#F2D06B', emoji: 'ந' },
+  { id: 'ta_ra', word: 'ர', language: 'ta', transliteration: 'ra', meaning: 'sound "ra"', theme: 'Starter sounds', color: '#8FD0C4', emoji: 'ர' },
+  { id: 'ta_la', word: 'ல', language: 'ta', transliteration: 'la', meaning: 'sound "la"', theme: 'Starter sounds', color: '#F0A8C0', emoji: 'ல' },
+  { id: 'ta_sa', word: 'ஸ', language: 'ta', transliteration: 'sa', meaning: 'sound "sa"', theme: 'Starter sounds', color: '#A8B8E0', emoji: 'ஸ' },
+  { id: 'ta_ha', word: 'ஹ', language: 'ta', transliteration: 'ha', meaning: 'sound "ha"', theme: 'Starter sounds', color: '#D8B98A', emoji: 'ஹ' },
+];
+
 function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
   if (language === 'ta') {
     if (themeId === 'food') return tamilFoodItems;
     if (themeId === 'colors') return tamilColorItems;
     if (themeId === 'family') return tamilFamilyItems;
+    if (themeId === 'sounds') return tamilSoundItems;
     return [];
   }
   if (themeId === 'colors') return colorItems;
@@ -174,7 +192,7 @@ const themes: Theme[] = [
   { id: 'food', title: 'Food', subtitle: 'Learn tasty everyday words', status: 'ready', color: '#F7B733' },
   { id: 'colors', title: 'Colors', subtitle: 'Paint with colorful words', status: 'ready', color: '#78C6E7' },
   { id: 'family', title: 'Family', subtitle: 'Words for people at home', status: 'ready', color: '#76B77C' },
-  { id: 'sounds', title: 'Starter sounds', subtitle: 'Meet friendly Hindi letters', status: 'ready', color: '#E7755F' },
+  { id: 'sounds', title: 'Starter sounds', subtitle: 'Meet friendly letters', status: 'ready', color: '#E7755F' },
 ];
 
 // Order in which themes unlock. Themes with no real content yet (status
@@ -215,7 +233,7 @@ const themeUnitLabel: Record<ThemeId, string> = {
 };
 
 const initialProgress: Progress = Object.fromEntries(
-  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...tamilFoodItems, ...tamilColorItems, ...tamilFamilyItems].map((item) => [item.id, 'new']),
+  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...tamilFoodItems, ...tamilColorItems, ...tamilFamilyItems, ...tamilSoundItems].map((item) => [item.id, 'new']),
 ) as Progress;
 
 const characters: { id: CharacterId; name: string; subtitle: string }[] = [
