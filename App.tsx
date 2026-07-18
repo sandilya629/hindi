@@ -16,8 +16,9 @@ import {
 
 const PROGRESS_STORAGE_KEY = 'hindi-quest-progress';
 const REACTION_PAUSE_MS = 1800;
-const MAX_SPEECH_WAIT_MS = 3000;
-const SPEECH_RATE = 0.65;
+const MAX_SPEECH_WAIT_MS = 6000;
+const SPEECH_RATE = 0.5;
+const SOUND_REPEAT_GAP_MS = 350;
 
 type LanguageId = 'hi' | 'ta';
 
@@ -28,13 +29,27 @@ const languageVoiceCode: Record<LanguageId, string> = {
 
 function speakWord(text: string, language: LanguageId, onDone?: () => void) {
   Speech.stop();
-  Speech.speak(text, {
-    language: languageVoiceCode[language],
-    rate: SPEECH_RATE,
-    onDone,
-    onStopped: onDone,
-    onError: onDone,
-  });
+
+  const speakOnce = (onSpokenDone?: () => void) => {
+    Speech.speak(text, {
+      language: languageVoiceCode[language],
+      rate: SPEECH_RATE,
+      onDone: onSpokenDone,
+      onStopped: onSpokenDone,
+      onError: onSpokenDone,
+    });
+  };
+
+  // A single letter/sound is over almost instantly at any speech rate, so
+  // it needs repeating (not just slowing down) to give kids enough time to
+  // actually hear and sound it out.
+  if (text.length <= 1) {
+    speakOnce(() => {
+      setTimeout(() => speakOnce(onDone), SOUND_REPEAT_GAP_MS);
+    });
+  } else {
+    speakOnce(onDone);
+  }
 }
 
 function shuffleItems<T>(items: T[]): T[] {
