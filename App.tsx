@@ -106,6 +106,17 @@ const tamilFoodItems: LessonItem[] = [
   { id: 'vaazhaipazham', word: 'வாழைப்பழம்', language: 'ta', transliteration: 'vaazhaipazham', meaning: 'banana', theme: 'Food', color: '#F5DE6E', emoji: '🍌' },
 ];
 
+// NOTE: sourced from common, well-established everyday Tamil vocabulary,
+// but not yet checked by a native speaker. Flagged for review before use
+// with real families.
+const tamilColorItems: LessonItem[] = [
+  { id: 'sivappu', word: 'சிவப்பு', language: 'ta', transliteration: 'sivappu', meaning: 'red', theme: 'Colors', color: '#D64545', emoji: '🔴' },
+  { id: 'neelam', word: 'நீலம்', language: 'ta', transliteration: 'neelam', meaning: 'blue', theme: 'Colors', color: '#3E7CB1', emoji: '🔵' },
+  { id: 'manjal', word: 'மஞ்சள்', language: 'ta', transliteration: 'manjal', meaning: 'yellow', theme: 'Colors', color: '#F2C230', emoji: '🟡' },
+  { id: 'pachai', word: 'பச்சை', language: 'ta', transliteration: 'pachai', meaning: 'green', theme: 'Colors', color: '#4CAF6D', emoji: '🟢' },
+  { id: 'karuppu', word: 'கருப்பு', language: 'ta', transliteration: 'karuppu', meaning: 'black', theme: 'Colors', color: '#3A3A3A', emoji: '⚫' },
+];
+
 const colorItems: LessonItem[] = [
   { id: 'laal', word: 'लाल', language: 'hi', transliteration: 'laal', meaning: 'red', theme: 'Colors', color: '#D64545', emoji: '🔴' },
   { id: 'neela', word: 'नीला', language: 'hi', transliteration: 'neela', meaning: 'blue', theme: 'Colors', color: '#3E7CB1', emoji: '🔵' },
@@ -137,7 +148,9 @@ const soundItems: LessonItem[] = [
 
 function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
   if (language === 'ta') {
-    return themeId === 'food' ? tamilFoodItems : [];
+    if (themeId === 'food') return tamilFoodItems;
+    if (themeId === 'colors') return tamilColorItems;
+    return [];
   }
   if (themeId === 'colors') return colorItems;
   if (themeId === 'family') return familyItems;
@@ -190,7 +203,7 @@ const themeUnitLabel: Record<ThemeId, string> = {
 };
 
 const initialProgress: Progress = Object.fromEntries(
-  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...tamilFoodItems].map((item) => [item.id, 'new']),
+  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...tamilFoodItems, ...tamilColorItems].map((item) => [item.id, 'new']),
 ) as Progress;
 
 const characters: { id: CharacterId; name: string; subtitle: string }[] = [

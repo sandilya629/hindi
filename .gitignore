@@ -43,3 +43,4 @@ yarn-error.*
 # Local Expo logs
 expo-start.log
 expo-start.err.log
+.vercel
