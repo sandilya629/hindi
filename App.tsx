@@ -133,6 +133,17 @@ const familyItems: LessonItem[] = [
   { id: 'baccha', word: 'बच्चा', language: 'hi', transliteration: 'baccha', meaning: 'child', theme: 'Family', color: '#C9B8E8', emoji: '👶' },
 ];
 
+// NOTE: sourced from common, well-established everyday Tamil vocabulary,
+// but not yet checked by a native speaker. Flagged for review before use
+// with real families.
+const tamilFamilyItems: LessonItem[] = [
+  { id: 'amma', word: 'அம்மா', language: 'ta', transliteration: 'amma', meaning: 'mother', theme: 'Family', color: '#F4B8C4', emoji: '👩' },
+  { id: 'appa', word: 'அப்பா', language: 'ta', transliteration: 'appa', meaning: 'father', theme: 'Family', color: '#8FB8DE', emoji: '👨' },
+  { id: 'annan', word: 'அண்ணன்', language: 'ta', transliteration: 'annan', meaning: 'brother', theme: 'Family', color: '#A8D8B9', emoji: '👦' },
+  { id: 'akka', word: 'அக்கா', language: 'ta', transliteration: 'akka', meaning: 'sister', theme: 'Family', color: '#F7D488', emoji: '👧' },
+  { id: 'kuzhandhai', word: 'குழந்தை', language: 'ta', transliteration: 'kuzhandhai', meaning: 'child', theme: 'Family', color: '#C9B8E8', emoji: '👶' },
+];
+
 const soundItems: LessonItem[] = [
   { id: 'a', word: 'अ', language: 'hi', transliteration: 'a', meaning: 'sound "a"', theme: 'Starter sounds', color: '#F7B733', emoji: 'अ' },
   { id: 'aa', word: 'आ', language: 'hi', transliteration: 'aa', meaning: 'sound "aa"', theme: 'Starter sounds', color: '#6EC6DE', emoji: 'आ' },
@@ -150,6 +161,7 @@ function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
   if (language === 'ta') {
     if (themeId === 'food') return tamilFoodItems;
     if (themeId === 'colors') return tamilColorItems;
+    if (themeId === 'family') return tamilFamilyItems;
     return [];
   }
   if (themeId === 'colors') return colorItems;
@@ -203,7 +215,7 @@ const themeUnitLabel: Record<ThemeId, string> = {
 };
 
 const initialProgress: Progress = Object.fromEntries(
-  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...tamilFoodItems, ...tamilColorItems].map((item) => [item.id, 'new']),
+  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...tamilFoodItems, ...tamilColorItems, ...tamilFamilyItems].map((item) => [item.id, 'new']),
 ) as Progress;
 
 const characters: { id: CharacterId; name: string; subtitle: string }[] = [
