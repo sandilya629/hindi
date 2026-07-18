@@ -61,7 +61,7 @@ type LessonItem = {
   emoji: string;
 };
 
-type ThemeId = 'food' | 'colors';
+type ThemeId = 'food' | 'colors' | 'family' | 'sounds';
 
 type Theme = {
   id: string;
@@ -98,20 +98,44 @@ const colorItems: LessonItem[] = [
   { id: 'kaala', word: 'काला', language: 'hi', transliteration: 'kaala', meaning: 'black', theme: 'Colors', color: '#3A3A3A', emoji: '⚫' },
 ];
 
+const familyItems: LessonItem[] = [
+  { id: 'maa', word: 'माँ', language: 'hi', transliteration: 'maa', meaning: 'mother', theme: 'Family', color: '#F4B8C4', emoji: '👩' },
+  { id: 'pita', word: 'पिता', language: 'hi', transliteration: 'pita', meaning: 'father', theme: 'Family', color: '#8FB8DE', emoji: '👨' },
+  { id: 'bhai', word: 'भाई', language: 'hi', transliteration: 'bhai', meaning: 'brother', theme: 'Family', color: '#A8D8B9', emoji: '👦' },
+  { id: 'bahan', word: 'बहन', language: 'hi', transliteration: 'bahan', meaning: 'sister', theme: 'Family', color: '#F7D488', emoji: '👧' },
+  { id: 'baccha', word: 'बच्चा', language: 'hi', transliteration: 'baccha', meaning: 'child', theme: 'Family', color: '#C9B8E8', emoji: '👶' },
+];
+
+const soundItems: LessonItem[] = [
+  { id: 'a', word: 'अ', language: 'hi', transliteration: 'a', meaning: 'sound "a"', theme: 'Starter sounds', color: '#F7B733', emoji: 'अ' },
+  { id: 'aa', word: 'आ', language: 'hi', transliteration: 'aa', meaning: 'sound "aa"', theme: 'Starter sounds', color: '#6EC6DE', emoji: 'आ' },
+  { id: 'ka', word: 'क', language: 'hi', transliteration: 'ka', meaning: 'sound "ka"', theme: 'Starter sounds', color: '#7FC77E', emoji: 'क' },
+  { id: 'ma', word: 'म', language: 'hi', transliteration: 'ma', meaning: 'sound "ma"', theme: 'Starter sounds', color: '#E88A73', emoji: 'म' },
+  { id: 'pa', word: 'प', language: 'hi', transliteration: 'pa', meaning: 'sound "pa"', theme: 'Starter sounds', color: '#C9A0E0', emoji: 'प' },
+  { id: 'na', word: 'न', language: 'hi', transliteration: 'na', meaning: 'sound "na"', theme: 'Starter sounds', color: '#F2D06B', emoji: 'न' },
+  { id: 'ra', word: 'र', language: 'hi', transliteration: 'ra', meaning: 'sound "ra"', theme: 'Starter sounds', color: '#8FD0C4', emoji: 'र' },
+  { id: 'la', word: 'ल', language: 'hi', transliteration: 'la', meaning: 'sound "la"', theme: 'Starter sounds', color: '#F0A8C0', emoji: 'ल' },
+  { id: 'sa', word: 'स', language: 'hi', transliteration: 'sa', meaning: 'sound "sa"', theme: 'Starter sounds', color: '#A8B8E0', emoji: 'स' },
+  { id: 'ha', word: 'ह', language: 'hi', transliteration: 'ha', meaning: 'sound "ha"', theme: 'Starter sounds', color: '#D8B98A', emoji: 'ह' },
+];
+
 function itemsForTheme(themeId: ThemeId): LessonItem[] {
-  return themeId === 'colors' ? colorItems : foodItems;
+  if (themeId === 'colors') return colorItems;
+  if (themeId === 'family') return familyItems;
+  if (themeId === 'sounds') return soundItems;
+  return foodItems;
 }
 
 const themes: Theme[] = [
   { id: 'food', title: 'Food', subtitle: 'Learn tasty everyday words', status: 'ready', color: '#F7B733' },
   { id: 'colors', title: 'Colors', subtitle: 'Paint with Hindi words', status: 'ready', color: '#78C6E7' },
-  { id: 'family', title: 'Family', subtitle: 'Words for people at home', status: 'soon', color: '#76B77C' },
-  { id: 'sounds', title: 'Starter sounds', subtitle: 'Meet friendly Hindi letters', status: 'soon', color: '#E7755F' },
+  { id: 'family', title: 'Family', subtitle: 'Words for people at home', status: 'ready', color: '#76B77C' },
+  { id: 'sounds', title: 'Starter sounds', subtitle: 'Meet friendly Hindi letters', status: 'ready', color: '#E7755F' },
 ];
 
 // Order in which themes unlock. Themes with no real content yet (status
 // 'soon') aren't part of this sequence — they stay locked regardless.
-const themeUnlockOrder: ThemeId[] = ['food', 'colors'];
+const themeUnlockOrder: ThemeId[] = ['food', 'colors', 'family', 'sounds'];
 
 function isThemeMastered(themeId: ThemeId, progress: Progress): boolean {
   return itemsForTheme(themeId).every((item) => progress[item.id] === 'known');
@@ -130,8 +154,22 @@ function currentLevel(progress: Progress): number {
   return 1 + themeUnlockOrder.filter((id) => isThemeMastered(id, progress)).length;
 }
 
+const themeRewardName: Record<ThemeId, string> = {
+  food: 'picnic basket',
+  colors: 'color palette',
+  family: 'family photo album',
+  sounds: 'sound chart',
+};
+
+const themeUnitLabel: Record<ThemeId, string> = {
+  food: 'words',
+  colors: 'words',
+  family: 'words',
+  sounds: 'sounds',
+};
+
 const initialProgress: Progress = Object.fromEntries(
-  [...foodItems, ...colorItems].map((item) => [item.id, 'new']),
+  [...foodItems, ...colorItems, ...familyItems, ...soundItems].map((item) => [item.id, 'new']),
 ) as Progress;
 
 const characters: { id: CharacterId; name: string; subtitle: string }[] = [
@@ -382,7 +420,7 @@ export default function App() {
           setFeedback('Pair found!');
           playSuccessSound();
           if (nextMatched.length === 4) {
-            setEarnedReward(`${characterMeta.name}'s ${activeTheme === 'colors' ? 'color palette' : 'picnic basket'}`);
+            setEarnedReward(`${characterMeta.name}'s ${themeRewardName[activeTheme]}`);
             setScreen('reward');
           }
         } else {
@@ -578,11 +616,11 @@ export default function App() {
             <View style={styles.lessonHeader}>
               <View>
                 <Text style={styles.kicker}>{activeThemeMeta?.title ?? 'Food'} Game</Text>
-                <Text style={styles.title}>Learn {themeItems.length} Hindi words</Text>
+                <Text style={styles.title}>Learn {themeItems.length} {languageMeta.name} {themeUnitLabel[activeTheme]}</Text>
               </View>
               <CharacterMascot character={character} mood="ready" compact />
             </View>
-            <Text style={styles.subtitle}>Tap a word to hear it. Then {characterMeta.name} will quiz you.</Text>
+            <Text style={styles.subtitle}>Tap one to hear it. Then {characterMeta.name} will quiz you.</Text>
             <View style={styles.wordPreviewGrid}>
               {themeItems.map((item) => (
                 <WordPreview key={item.id} item={item} showPronunciation={adultSupport} onPress={() => speakWord(item.word, item.language)} />
