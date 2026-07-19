@@ -65,7 +65,7 @@ type LessonItem = {
   emoji: string;
 };
 
-type ThemeId = 'food' | 'colors' | 'family' | 'sounds' | 'animals' | 'numbers' | 'body';
+type ThemeId = 'food' | 'colors' | 'family' | 'sounds' | 'animals' | 'numbers' | 'body' | 'clothes' | 'transport';
 
 type Theme = {
   id: string;
@@ -188,6 +188,24 @@ const bodyItems: LessonItem[] = [
   { id: 'munh', word: 'मुँह', language: 'hi', transliteration: 'munh', meaning: 'mouth', theme: 'Body', color: '#F2A6AC', emoji: '👄' },
 ];
 
+const clothesItems: LessonItem[] = [
+  { id: 'shirt', word: 'शर्ट', language: 'hi', transliteration: 'shirt', meaning: 'shirt', theme: 'Clothes', color: '#89C4E1', emoji: '👕' },
+  { id: 'pant', word: 'पैंट', language: 'hi', transliteration: 'pant', meaning: 'pants', theme: 'Clothes', color: '#5B7C99', emoji: '👖' },
+  { id: 'topi', word: 'टोपी', language: 'hi', transliteration: 'topi', meaning: 'hat', theme: 'Clothes', color: '#E8B04B', emoji: '🧢' },
+  { id: 'joote', word: 'जूते', language: 'hi', transliteration: 'joote', meaning: 'shoes', theme: 'Clothes', color: '#8B6F47', emoji: '👟' },
+  { id: 'moze', word: 'मोज़े', language: 'hi', transliteration: 'moze', meaning: 'socks', theme: 'Clothes', color: '#E88AA8', emoji: '🧦' },
+  { id: 'saari', word: 'साड़ी', language: 'hi', transliteration: 'saari', meaning: 'saree', theme: 'Clothes', color: '#D64545', emoji: '🥻' },
+];
+
+const transportItems: LessonItem[] = [
+  { id: 'kaar', word: 'कार', language: 'hi', transliteration: 'kaar', meaning: 'car', theme: 'Transport', color: '#E85D5D', emoji: '🚗' },
+  { id: 'bas', word: 'बस', language: 'hi', transliteration: 'bas', meaning: 'bus', theme: 'Transport', color: '#F2C230', emoji: '🚌' },
+  { id: 'train', word: 'ट्रेन', language: 'hi', transliteration: 'train', meaning: 'train', theme: 'Transport', color: '#5B8AA6', emoji: '🚂' },
+  { id: 'vimaan', word: 'विमान', language: 'hi', transliteration: 'vimaan', meaning: 'airplane', theme: 'Transport', color: '#A8C4E0', emoji: '✈️' },
+  { id: 'saaikil', word: 'साइकिल', language: 'hi', transliteration: 'saaikil', meaning: 'bicycle', theme: 'Transport', color: '#7FC77E', emoji: '🚲' },
+  { id: 'naav', word: 'नाव', language: 'hi', transliteration: 'naav', meaning: 'boat', theme: 'Transport', color: '#6EC6DE', emoji: '⛵' },
+];
+
 // NOTE: sourced from common, well-established everyday Tamil vocabulary,
 // but not yet checked by a native speaker. Flagged for review before use
 // with real families. IDs are prefixed (ta_*) since the transliterations
@@ -219,6 +237,8 @@ function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
   if (themeId === 'animals') return animalItems;
   if (themeId === 'numbers') return numberItems;
   if (themeId === 'body') return bodyItems;
+  if (themeId === 'clothes') return clothesItems;
+  if (themeId === 'transport') return transportItems;
   return foodItems;
 }
 
@@ -230,11 +250,13 @@ const themes: Theme[] = [
   { id: 'animals', title: 'Animals', subtitle: 'Meet furry, feathery friends', status: 'ready', color: '#D4A574' },
   { id: 'numbers', title: 'Numbers', subtitle: 'Count from one to ten', status: 'ready', color: '#9B8FD9' },
   { id: 'body', title: 'Body', subtitle: 'Learn parts of the body', status: 'ready', color: '#F2A6C4' },
+  { id: 'clothes', title: 'Clothes', subtitle: 'What are we wearing today?', status: 'ready', color: '#5FBFAE' },
+  { id: 'transport', title: 'Transport', subtitle: 'Cars, trains, and planes', status: 'ready', color: '#5D8AA8' },
 ];
 
 // Order in which themes unlock. Themes with no real content yet (status
 // 'soon') aren't part of this sequence — they stay locked regardless.
-const themeUnlockOrder: ThemeId[] = ['food', 'colors', 'family', 'sounds', 'animals', 'numbers', 'body'];
+const themeUnlockOrder: ThemeId[] = ['food', 'colors', 'family', 'sounds', 'animals', 'numbers', 'body', 'clothes', 'transport'];
 
 function isThemeMastered(themeId: ThemeId, progress: Progress, language: LanguageId): boolean {
   const items = itemsForTheme(themeId, language);
@@ -263,6 +285,8 @@ const themeRewardName: Record<ThemeId, string> = {
   animals: 'animal sticker book',
   numbers: 'counting chart',
   body: 'body map poster',
+  clothes: 'wardrobe collection',
+  transport: 'toy vehicle set',
 };
 
 const themeUnitLabel: Record<ThemeId, string> = {
@@ -273,10 +297,12 @@ const themeUnitLabel: Record<ThemeId, string> = {
   animals: 'words',
   numbers: 'numbers',
   body: 'words',
+  clothes: 'words',
+  transport: 'words',
 };
 
 const initialProgress: Progress = Object.fromEntries(
-  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...animalItems, ...numberItems, ...bodyItems, ...tamilFoodItems, ...tamilColorItems, ...tamilFamilyItems, ...tamilSoundItems].map((item) => [item.id, 'new']),
+  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...animalItems, ...numberItems, ...bodyItems, ...clothesItems, ...transportItems, ...tamilFoodItems, ...tamilColorItems, ...tamilFamilyItems, ...tamilSoundItems].map((item) => [item.id, 'new']),
 ) as Progress;
 
 const characters: { id: CharacterId; name: string; subtitle: string }[] = [
