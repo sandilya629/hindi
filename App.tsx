@@ -241,12 +241,42 @@ const tamilSoundItems: LessonItem[] = [
   { id: 'ta_ha', word: 'ஹ', language: 'ta', transliteration: 'ha', meaning: 'sound "ha"', theme: 'Starter sounds', color: '#D8B98A', emoji: 'ஹ' },
 ];
 
+// NOTE: sourced from common, well-established everyday Tamil vocabulary,
+// but not yet checked by a native speaker. Flagged for review before use
+// with real families.
+const tamilAnimalItems: LessonItem[] = [
+  { id: 'naai', word: 'நாய்', language: 'ta', transliteration: 'naai', meaning: 'dog', theme: 'Animals', color: '#D4A574', emoji: '🐶' },
+  { id: 'poonai', word: 'பூனை', language: 'ta', transliteration: 'poonai', meaning: 'cat', theme: 'Animals', color: '#E8C9A0', emoji: '🐱' },
+  { id: 'yaanai', word: 'யானை', language: 'ta', transliteration: 'yaanai', meaning: 'elephant', theme: 'Animals', color: '#A8B4C0', emoji: '🐘' },
+  { id: 'singam', word: 'சிங்கம்', language: 'ta', transliteration: 'singam', meaning: 'lion', theme: 'Animals', color: '#F2B84B', emoji: '🦁' },
+  { id: 'muyal', word: 'முயல்', language: 'ta', transliteration: 'muyal', meaning: 'rabbit', theme: 'Animals', color: '#EAD9E8', emoji: '🐰' },
+  { id: 'paravai', word: 'பறவை', language: 'ta', transliteration: 'paravai', meaning: 'bird', theme: 'Animals', color: '#8FD0C4', emoji: '🐦' },
+];
+
+// NOTE: sourced from common, well-established everyday Tamil vocabulary,
+// but not yet checked by a native speaker. Flagged for review before use
+// with real families.
+const tamilNumberItems: LessonItem[] = [
+  { id: 'ondru', word: 'ஒன்று', language: 'ta', transliteration: 'ondru', meaning: '1', theme: 'Numbers', color: '#9B8FD9', emoji: '1️⃣' },
+  { id: 'irandu', word: 'இரண்டு', language: 'ta', transliteration: 'irandu', meaning: '2', theme: 'Numbers', color: '#8FA0D9', emoji: '2️⃣' },
+  { id: 'moondru', word: 'மூன்று', language: 'ta', transliteration: 'moondru', meaning: '3', theme: 'Numbers', color: '#8FB8D9', emoji: '3️⃣' },
+  { id: 'naangu', word: 'நான்கு', language: 'ta', transliteration: 'naangu', meaning: '4', theme: 'Numbers', color: '#8FCCD9', emoji: '4️⃣' },
+  { id: 'aindhu', word: 'ஐந்து', language: 'ta', transliteration: 'aindhu', meaning: '5', theme: 'Numbers', color: '#8FD9CC', emoji: '5️⃣' },
+  { id: 'aaru', word: 'ஆறு', language: 'ta', transliteration: 'aaru', meaning: '6', theme: 'Numbers', color: '#A0D98F', emoji: '6️⃣' },
+  { id: 'ezhu', word: 'ஏழு', language: 'ta', transliteration: 'ezhu', meaning: '7', theme: 'Numbers', color: '#D9CC8F', emoji: '7️⃣' },
+  { id: 'ettu', word: 'எட்டு', language: 'ta', transliteration: 'ettu', meaning: '8', theme: 'Numbers', color: '#D9A88F', emoji: '8️⃣' },
+  { id: 'onbadhu', word: 'ஒன்பது', language: 'ta', transliteration: 'onbadhu', meaning: '9', theme: 'Numbers', color: '#D98FA0', emoji: '9️⃣' },
+  { id: 'paththu', word: 'பத்து', language: 'ta', transliteration: 'paththu', meaning: '10', theme: 'Numbers', color: '#C08FD9', emoji: '🔟' },
+];
+
 function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
   if (language === 'ta') {
     if (themeId === 'food') return tamilFoodItems;
     if (themeId === 'colors') return tamilColorItems;
     if (themeId === 'family') return tamilFamilyItems;
     if (themeId === 'sounds') return tamilSoundItems;
+    if (themeId === 'animals') return tamilAnimalItems;
+    if (themeId === 'numbers') return tamilNumberItems;
     return [];
   }
   if (themeId === 'colors') return colorItems;
@@ -328,7 +358,7 @@ const themeUnitLabel: Record<ThemeId, string> = {
 };
 
 const initialProgress: Progress = Object.fromEntries(
-  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...animalItems, ...numberItems, ...bodyItems, ...clothesItems, ...transportItems, ...placeItems, ...schoolItems, ...tamilFoodItems, ...tamilColorItems, ...tamilFamilyItems, ...tamilSoundItems].map((item) => [item.id, 'new']),
+  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...animalItems, ...numberItems, ...bodyItems, ...clothesItems, ...transportItems, ...placeItems, ...schoolItems, ...tamilFoodItems, ...tamilColorItems, ...tamilFamilyItems, ...tamilSoundItems, ...tamilAnimalItems, ...tamilNumberItems].map((item) => [item.id, 'new']),
 ) as Progress;
 
 const characters: { id: CharacterId; name: string; subtitle: string }[] = [
