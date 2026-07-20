@@ -269,6 +269,30 @@ const tamilNumberItems: LessonItem[] = [
   { id: 'paththu', word: 'பத்து', language: 'ta', transliteration: 'paththu', meaning: '10', theme: 'Numbers', color: '#C08FD9', emoji: '🔟' },
 ];
 
+// NOTE: sourced from common, well-established everyday Tamil vocabulary,
+// but not yet checked by a native speaker. Flagged for review before use
+// with real families.
+const tamilBodyItems: LessonItem[] = [
+  { id: 'kan', word: 'கண்', language: 'ta', transliteration: 'kan', meaning: 'eye', theme: 'Body', color: '#F2A6C4', emoji: '👁️' },
+  { id: 'mookku', word: 'மூக்கு', language: 'ta', transliteration: 'mookku', meaning: 'nose', theme: 'Body', color: '#F7C6D9', emoji: '👃' },
+  { id: 'kaadhu', word: 'காது', language: 'ta', transliteration: 'kaadhu', meaning: 'ear', theme: 'Body', color: '#F2B8CC', emoji: '👂' },
+  { id: 'kai', word: 'கை', language: 'ta', transliteration: 'kai', meaning: 'hand', theme: 'Body', color: '#EDA6D4', emoji: '✋' },
+  { id: 'kaal', word: 'கால்', language: 'ta', transliteration: 'kaal', meaning: 'foot', theme: 'Body', color: '#E8A6E0', emoji: '🦶' },
+  { id: 'vaai', word: 'வாய்', language: 'ta', transliteration: 'vaai', meaning: 'mouth', theme: 'Body', color: '#F2A6AC', emoji: '👄' },
+];
+
+// NOTE: sourced from common, well-established everyday Tamil vocabulary,
+// but not yet checked by a native speaker. Flagged for review before use
+// with real families.
+const tamilClothesItems: LessonItem[] = [
+  { id: 'sattai', word: 'சட்டை', language: 'ta', transliteration: 'sattai', meaning: 'shirt', theme: 'Clothes', color: '#89C4E1', emoji: '👕' },
+  { id: 'kaarchattai', word: 'காற்சட்டை', language: 'ta', transliteration: 'kaarchattai', meaning: 'pants', theme: 'Clothes', color: '#5B7C99', emoji: '👖' },
+  { id: 'thoppi', word: 'தொப்பி', language: 'ta', transliteration: 'thoppi', meaning: 'hat', theme: 'Clothes', color: '#E8B04B', emoji: '🧢' },
+  { id: 'kaalani', word: 'காலணி', language: 'ta', transliteration: 'kaalani', meaning: 'shoes', theme: 'Clothes', color: '#8B6F47', emoji: '👟' },
+  { id: 'kaalurai', word: 'காலுறை', language: 'ta', transliteration: 'kaalurai', meaning: 'socks', theme: 'Clothes', color: '#E88AA8', emoji: '🧦' },
+  { id: 'saelai', word: 'சேலை', language: 'ta', transliteration: 'saelai', meaning: 'saree', theme: 'Clothes', color: '#D64545', emoji: '🥻' },
+];
+
 function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
   if (language === 'ta') {
     if (themeId === 'food') return tamilFoodItems;
@@ -277,6 +301,8 @@ function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
     if (themeId === 'sounds') return tamilSoundItems;
     if (themeId === 'animals') return tamilAnimalItems;
     if (themeId === 'numbers') return tamilNumberItems;
+    if (themeId === 'body') return tamilBodyItems;
+    if (themeId === 'clothes') return tamilClothesItems;
     return [];
   }
   if (themeId === 'colors') return colorItems;
@@ -358,7 +384,7 @@ const themeUnitLabel: Record<ThemeId, string> = {
 };
 
 const initialProgress: Progress = Object.fromEntries(
-  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...animalItems, ...numberItems, ...bodyItems, ...clothesItems, ...transportItems, ...placeItems, ...schoolItems, ...tamilFoodItems, ...tamilColorItems, ...tamilFamilyItems, ...tamilSoundItems, ...tamilAnimalItems, ...tamilNumberItems].map((item) => [item.id, 'new']),
+  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...animalItems, ...numberItems, ...bodyItems, ...clothesItems, ...transportItems, ...placeItems, ...schoolItems, ...tamilFoodItems, ...tamilColorItems, ...tamilFamilyItems, ...tamilSoundItems, ...tamilAnimalItems, ...tamilNumberItems, ...tamilBodyItems, ...tamilClothesItems].map((item) => [item.id, 'new']),
 ) as Progress;
 
 const characters: { id: CharacterId; name: string; subtitle: string }[] = [
