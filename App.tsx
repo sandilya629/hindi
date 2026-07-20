@@ -16,11 +16,14 @@ import {
 
 const PROGRESS_STORAGE_KEY = 'hindi-quest-progress';
 const REACTION_PAUSE_MS = 1800;
-const MAX_SPEECH_WAIT_MS = 3000;
-const SPEECH_RATE = 0.5;
+// Raised alongside the slower rates below so this safety-net timeout (for
+// devices with no voice installed) doesn't fire before normal, slow speech
+// actually finishes on a working device.
+const MAX_SPEECH_WAIT_MS = 4500;
+const SPEECH_RATE = 0.4;
 // Single letters/sounds get an even slower rate so the one utterance is
 // stretched out and easy to sound along with, instead of being repeated.
-const SOUND_SPEECH_RATE = 0.32;
+const SOUND_SPEECH_RATE = 0.26;
 
 type LanguageId = 'hi' | 'ta';
 
