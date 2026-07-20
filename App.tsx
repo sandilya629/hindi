@@ -1076,6 +1076,65 @@ const characterImages: Record<CharacterId, ImageSourcePropType> = {
   golu: require('./assets/characters/golu.png'),
 };
 
+// Large, crisp icon renders (Twemoji, CC-BY 4.0 — see assets/icons/CREDIT.md)
+// for concrete-noun themes (Food, Family, Animals, Body, Clothes, Transport,
+// Places, School), keyed by the item's English `meaning` so one icon is
+// shared by the matching Hindi and Tamil word for the same concept. These
+// are bright, simple, friendly illustrations — deliberately not real photos,
+// since photographic close-ups (macro body parts, animal faces, etc.) read
+// as too intense/adult for the toddler audience this app is built for.
+// Colors/Numbers/Starter sounds intentionally have no entry here and keep
+// their emoji/glyph treatment in FoodVisual below.
+const objectIcons: Record<string, ImageSourcePropType> = {
+  water: require('./assets/icons/water.png'),
+  milk: require('./assets/icons/milk.png'),
+  mango: require('./assets/icons/mango.png'),
+  flatbread: require('./assets/icons/flatbread.png'),
+  rice: require('./assets/icons/rice.png'),
+  banana: require('./assets/icons/banana.png'),
+  mother: require('./assets/icons/mother.png'),
+  father: require('./assets/icons/father.png'),
+  brother: require('./assets/icons/brother.png'),
+  sister: require('./assets/icons/sister.png'),
+  child: require('./assets/icons/child.png'),
+  dog: require('./assets/icons/dog.png'),
+  cat: require('./assets/icons/cat.png'),
+  elephant: require('./assets/icons/elephant.png'),
+  lion: require('./assets/icons/lion.png'),
+  rabbit: require('./assets/icons/rabbit.png'),
+  bird: require('./assets/icons/bird.png'),
+  eye: require('./assets/icons/eye.png'),
+  nose: require('./assets/icons/nose.png'),
+  ear: require('./assets/icons/ear.png'),
+  hand: require('./assets/icons/hand.png'),
+  foot: require('./assets/icons/foot.png'),
+  mouth: require('./assets/icons/mouth.png'),
+  shirt: require('./assets/icons/shirt.png'),
+  pants: require('./assets/icons/pants.png'),
+  hat: require('./assets/icons/hat.png'),
+  shoes: require('./assets/icons/shoes.png'),
+  socks: require('./assets/icons/socks.png'),
+  saree: require('./assets/icons/saree.png'),
+  car: require('./assets/icons/car.png'),
+  bus: require('./assets/icons/bus.png'),
+  train: require('./assets/icons/train.png'),
+  airplane: require('./assets/icons/airplane.png'),
+  bicycle: require('./assets/icons/bicycle.png'),
+  boat: require('./assets/icons/boat.png'),
+  home: require('./assets/icons/home.png'),
+  market: require('./assets/icons/market.png'),
+  hospital: require('./assets/icons/hospital.png'),
+  temple: require('./assets/icons/temple.png'),
+  park: require('./assets/icons/park.png'),
+  road: require('./assets/icons/road.png'),
+  book: require('./assets/icons/book.png'),
+  pencil: require('./assets/icons/pencil.png'),
+  'school bag': require('./assets/icons/school-bag.png'),
+  pen: require('./assets/icons/pen.png'),
+  ruler: require('./assets/icons/ruler.png'),
+  notebook: require('./assets/icons/notebook.png'),
+};
+
 const mascotMoodText: Record<LanguageId, Record<CharacterMood, string>> = {
   hi: { hello: 'नमस्ते', speak: 'सुनो', happy: 'शाबाश', ready: 'चलो' },
   ta: { hello: 'வணக்கம்', speak: 'கேளு', happy: 'சபாஷ்', ready: 'வா' },
@@ -1103,9 +1162,14 @@ function CharacterMascot({
 }
 
 function FoodVisual({ item, small = false }: { item: LessonItem; small?: boolean }) {
+  const icon = objectIcons[item.meaning];
   return (
     <View style={[styles.foodVisual, small && styles.foodVisualSmall, { backgroundColor: item.color }]}>
-      <Text style={[styles.foodVisualEmoji, small && styles.foodVisualEmojiSmall]}>{item.emoji}</Text>
+      {icon ? (
+        <Image source={icon} style={[styles.foodVisualIcon, small && styles.foodVisualIconSmall]} resizeMode="contain" />
+      ) : (
+        <Text style={[styles.foodVisualEmoji, small && styles.foodVisualEmojiSmall]}>{item.emoji}</Text>
+      )}
     </View>
   );
 }
@@ -1268,18 +1332,23 @@ const styles = StyleSheet.create({
   },
   masteryBannerText: { color: '#7B5B00', fontSize: 15, fontWeight: '900', textAlign: 'center' },
   lessonHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
-  wordPreviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  wordPreviewGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   wordPreview: {
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderColor: '#DDE4EC',
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
-    gap: 4,
-    padding: 12,
+    gap: 6,
+    padding: 8,
     width: '47%',
+    shadowColor: '#24324C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  previewHindi: { color: '#24324C', fontSize: 24, fontWeight: '900' },
+  previewHindi: { color: '#24324C', fontSize: 20, fontWeight: '900' },
   previewMeta: { color: '#596270', fontSize: 13, fontWeight: '700' },
   previewMeaning: { color: '#7B5B00', fontSize: 13, fontWeight: '800' },
   gameHeader: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' },
@@ -1300,31 +1369,41 @@ const styles = StyleSheet.create({
   promptHelp: { color: '#526070', fontSize: 16, fontWeight: '700' },
   replayHint: { color: '#7B5B00', fontSize: 13, fontWeight: '800', marginTop: 6 },
   feedbackText: { color: '#3F4A5C', fontSize: 15, fontWeight: '800', minHeight: 24 },
-  answerGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  answerGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   answerTile: {
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderColor: '#DDE4EC',
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 2,
     gap: 4,
     minHeight: 150,
-    padding: 12,
+    padding: 8,
     width: '47%',
+    shadowColor: '#24324C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
   answerCorrect: { backgroundColor: '#EFF7F0', borderColor: '#3D9158' },
   answerWrong: { backgroundColor: '#FFF0EB', borderColor: '#E7755F' },
-  answerHindi: { color: '#24324C', fontSize: 24, fontWeight: '900' },
+  answerHindi: { color: '#24324C', fontSize: 20, fontWeight: '900' },
   answerMeaning: { color: '#596270', fontSize: 14, fontWeight: '800' },
-  memoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  memoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   memoryCard: {
     alignItems: 'center',
     backgroundColor: '#24324C',
-    borderRadius: 16,
-    height: 126,
+    borderRadius: 18,
+    height: 124,
     justifyContent: 'center',
-    padding: 10,
+    padding: 8,
     width: '47%',
+    shadowColor: '#24324C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
   },
   memoryCardOpen: { backgroundColor: '#FFFFFF', borderColor: '#DDE4EC', borderWidth: 1 },
   cardBackImage: { borderRadius: 12, height: 64, resizeMode: 'contain', width: 64 },
@@ -1404,13 +1483,15 @@ const styles = StyleSheet.create({
   foodVisual: {
     alignItems: 'center',
     borderColor: 'rgba(36,50,76,0.14)',
-    borderRadius: 24,
+    borderRadius: 30,
     borderWidth: 1,
-    height: 58,
+    height: 80,
     justifyContent: 'center',
-    width: 58,
+    width: 80,
   },
-  foodVisualSmall: { borderRadius: 18, height: 38, width: 38 },
-  foodVisualEmoji: { fontSize: 30, lineHeight: 34 },
-  foodVisualEmojiSmall: { fontSize: 20, lineHeight: 24 },
+  foodVisualSmall: { borderRadius: 20, height: 56, width: 56 },
+  foodVisualEmoji: { fontSize: 36, lineHeight: 40 },
+  foodVisualEmojiSmall: { fontSize: 26, lineHeight: 30 },
+  foodVisualIcon: { height: 54, width: 54 },
+  foodVisualIconSmall: { height: 36, width: 36 },
 });
