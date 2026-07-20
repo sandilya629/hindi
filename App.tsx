@@ -293,6 +293,44 @@ const tamilClothesItems: LessonItem[] = [
   { id: 'saelai', word: 'சேலை', language: 'ta', transliteration: 'saelai', meaning: 'saree', theme: 'Clothes', color: '#D64545', emoji: '🥻' },
 ];
 
+// NOTE: sourced from common, well-established everyday Tamil vocabulary,
+// but not yet checked by a native speaker. Flagged for review before use
+// with real families. 'kaar' is prefixed (ta_) since its transliteration
+// matches Hindi's car id and would otherwise collide in shared progress.
+const tamilTransportItems: LessonItem[] = [
+  { id: 'ta_kaar', word: 'கார்', language: 'ta', transliteration: 'kaar', meaning: 'car', theme: 'Transport', color: '#E85D5D', emoji: '🚗' },
+  { id: 'perundhu', word: 'பேருந்து', language: 'ta', transliteration: 'perundhu', meaning: 'bus', theme: 'Transport', color: '#F2C230', emoji: '🚌' },
+  { id: 'rayil', word: 'ரயில்', language: 'ta', transliteration: 'rayil', meaning: 'train', theme: 'Transport', color: '#5B8AA6', emoji: '🚂' },
+  { id: 'vimaanam', word: 'விமானம்', language: 'ta', transliteration: 'vimaanam', meaning: 'airplane', theme: 'Transport', color: '#A8C4E0', emoji: '✈️' },
+  { id: 'mithivandi', word: 'மிதிவண்டி', language: 'ta', transliteration: 'mithivandi', meaning: 'bicycle', theme: 'Transport', color: '#7FC77E', emoji: '🚲' },
+  { id: 'padagu', word: 'படகு', language: 'ta', transliteration: 'padagu', meaning: 'boat', theme: 'Transport', color: '#6EC6DE', emoji: '⛵' },
+];
+
+// NOTE: sourced from common, well-established everyday Tamil vocabulary,
+// but not yet checked by a native speaker. Flagged for review before use
+// with real families.
+const tamilPlaceItems: LessonItem[] = [
+  { id: 'veedu', word: 'வீடு', language: 'ta', transliteration: 'veedu', meaning: 'home', theme: 'Places', color: '#F2C879', emoji: '🏠' },
+  { id: 'santhai', word: 'சந்தை', language: 'ta', transliteration: 'santhai', meaning: 'market', theme: 'Places', color: '#E8935A', emoji: '🏪' },
+  { id: 'maruthuvamanai', word: 'மருத்துவமனை', language: 'ta', transliteration: 'maruthuvamanai', meaning: 'hospital', theme: 'Places', color: '#E86A6A', emoji: '🏥' },
+  { id: 'koyil', word: 'கோவில்', language: 'ta', transliteration: 'koyil', meaning: 'temple', theme: 'Places', color: '#D9A45C', emoji: '🛕' },
+  { id: 'poonga', word: 'பூங்கா', language: 'ta', transliteration: 'poonga', meaning: 'park', theme: 'Places', color: '#7FC77E', emoji: '🏞️' },
+  { id: 'saalai', word: 'சாலை', language: 'ta', transliteration: 'saalai', meaning: 'road', theme: 'Places', color: '#8A8A8A', emoji: '🛣️' },
+];
+
+// NOTE: sourced from common, well-established everyday Tamil vocabulary,
+// but not yet checked by a native speaker. Flagged for review before use
+// with real families. 'pencil' is prefixed (ta_) since its transliteration
+// matches Hindi's pencil id and would otherwise collide in shared progress.
+const tamilSchoolItems: LessonItem[] = [
+  { id: 'puthagam', word: 'புத்தகம்', language: 'ta', transliteration: 'puthagam', meaning: 'book', theme: 'School', color: '#6EA8D9', emoji: '📖' },
+  { id: 'ta_pencil', word: 'பென்சில்', language: 'ta', transliteration: 'pencil', meaning: 'pencil', theme: 'School', color: '#F2C230', emoji: '✏️' },
+  { id: 'pallippai', word: 'பள்ளிப்பை', language: 'ta', transliteration: 'pallippai', meaning: 'school bag', theme: 'School', color: '#E86A6A', emoji: '🎒' },
+  { id: 'penaa', word: 'பேனா', language: 'ta', transliteration: 'penaa', meaning: 'pen', theme: 'School', color: '#4A9D8F', emoji: '🖊️' },
+  { id: 'alavukol', word: 'அளவுகோல்', language: 'ta', transliteration: 'alavukol', meaning: 'ruler', theme: 'School', color: '#F2A64B', emoji: '📏' },
+  { id: 'kurippedu', word: 'குறிப்பேடு', language: 'ta', transliteration: 'kurippedu', meaning: 'notebook', theme: 'School', color: '#8E7CC3', emoji: '📓' },
+];
+
 function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
   if (language === 'ta') {
     if (themeId === 'food') return tamilFoodItems;
@@ -303,6 +341,9 @@ function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
     if (themeId === 'numbers') return tamilNumberItems;
     if (themeId === 'body') return tamilBodyItems;
     if (themeId === 'clothes') return tamilClothesItems;
+    if (themeId === 'transport') return tamilTransportItems;
+    if (themeId === 'places') return tamilPlaceItems;
+    if (themeId === 'school') return tamilSchoolItems;
     return [];
   }
   if (themeId === 'colors') return colorItems;
@@ -384,7 +425,7 @@ const themeUnitLabel: Record<ThemeId, string> = {
 };
 
 const initialProgress: Progress = Object.fromEntries(
-  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...animalItems, ...numberItems, ...bodyItems, ...clothesItems, ...transportItems, ...placeItems, ...schoolItems, ...tamilFoodItems, ...tamilColorItems, ...tamilFamilyItems, ...tamilSoundItems, ...tamilAnimalItems, ...tamilNumberItems, ...tamilBodyItems, ...tamilClothesItems].map((item) => [item.id, 'new']),
+  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...animalItems, ...numberItems, ...bodyItems, ...clothesItems, ...transportItems, ...placeItems, ...schoolItems, ...tamilFoodItems, ...tamilColorItems, ...tamilFamilyItems, ...tamilSoundItems, ...tamilAnimalItems, ...tamilNumberItems, ...tamilBodyItems, ...tamilClothesItems, ...tamilTransportItems, ...tamilPlaceItems, ...tamilSchoolItems].map((item) => [item.id, 'new']),
 ) as Progress;
 
 const characters: { id: CharacterId; name: string; subtitle: string }[] = [
