@@ -662,10 +662,8 @@ export default function App() {
         }
 
         setSelectedAnswer(null);
-        setFeedback('Find the matching pairs.');
-        setMatchedCards([]);
-        setFlippedCards([]);
-        setScreen('memory');
+        setEarnedReward(`${characterMeta.name}'s ${themeRewardName[activeTheme]}`);
+        setScreen('reward');
       }, REACTION_PAUSE_MS);
     };
 
@@ -674,6 +672,13 @@ export default function App() {
     // language and speech synthesis stalls instead of erroring out quickly.
     speakWord(currentItem.word, currentItem.language, advanceToNext);
     setTimeout(advanceToNext, MAX_SPEECH_WAIT_MS);
+  }
+
+  function startMemoryPairs() {
+    setFeedback('Find the matching pairs.');
+    setMatchedCards([]);
+    setFlippedCards([]);
+    setScreen('memory');
   }
 
   function handleCardPress(card: MemoryCard) {
@@ -699,8 +704,7 @@ export default function App() {
           setFeedback('Pair found!');
           playSuccessSound();
           if (nextMatched.length === 4) {
-            setEarnedReward(`${characterMeta.name}'s ${themeRewardName[activeTheme]}`);
-            setScreen('reward');
+            setScreen('themes');
           }
         } else {
           setFeedback('Not yet. Try another pair.');
@@ -1006,6 +1010,7 @@ export default function App() {
               ) : null}
             </View>
             <PrimaryButton label="Play next" onPress={() => setScreen('themes')} />
+            <SecondaryButton label="Play Memory Pairs (optional)" onPress={startMemoryPairs} />
             <SecondaryButton label="See progress" onPress={() => setScreen('progress')} />
           </ScreenShell>
         )}
