@@ -24,6 +24,11 @@ const SPEECH_RATE = 0.4;
 // Single letters/sounds get an even slower rate so the one utterance is
 // stretched out and easy to sound along with, instead of being repeated.
 const SOUND_SPEECH_RATE = 0.26;
+// Themes with more than this many words (Numbers, Starter sounds have 10)
+// still only show this many answer tiles per question — a toddler scanning
+// a wall of tiles for the right one loses more than they gain from extra
+// distractors. The correct tile is always included.
+const ANSWER_OPTIONS_CAP = 6;
 
 type LanguageId = 'hi' | 'ta';
 
@@ -50,6 +55,11 @@ function shuffleItems<T>(items: T[]): T[] {
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy;
+}
+
+function buildAnswerOptions(correctItem: LessonItem, pool: LessonItem[], cap: number): LessonItem[] {
+  const distractors = shuffleItems(pool.filter((item) => item.id !== correctItem.id)).slice(0, Math.max(cap - 1, 0));
+  return shuffleItems([correctItem, ...distractors]);
 }
 
 type Screen = 'onboarding' | 'home' | 'themes' | 'lesson' | 'match' | 'memory' | 'reward' | 'progress';
@@ -399,6 +409,11 @@ function currentLevel(progress: Progress, language: LanguageId): number {
   return 1 + themeUnlockOrder.filter((id) => isThemeMastered(id, progress, language)).length;
 }
 
+function currentThemeId(progress: Progress, language: LanguageId): ThemeId {
+  const nextUnmastered = themeUnlockOrder.find((id) => !isThemeMastered(id, progress, language));
+  return nextUnmastered ?? themeUnlockOrder[themeUnlockOrder.length - 1];
+}
+
 const themeRewardName: Record<ThemeId, string> = {
   food: 'picnic basket',
   colors: 'color palette',
@@ -496,9 +511,11 @@ export default function App() {
       ? `You mastered ${masteredMeta?.title}! ${nextMeta.title} is now unlocked.`
       : `You mastered ${masteredMeta?.title}!`;
   })();
-  const homeThemeItems = itemsForTheme('food', language);
-  const foodLearnedCount = homeThemeItems.filter((item) => progress[item.id] === 'known').length;
-  const foodPracticeCount = homeThemeItems.filter((item) => progress[item.id] === 'practice').length;
+  const homeThemeId = currentThemeId(progress, language);
+  const homeThemeMeta = themes.find((theme) => theme.id === homeThemeId);
+  const homeThemeItems = itemsForTheme(homeThemeId, language);
+  const homeLearnedCount = homeThemeItems.filter((item) => progress[item.id] === 'known').length;
+  const homePracticeCount = homeThemeItems.filter((item) => progress[item.id] === 'practice').length;
   const themeLearnedCount = themeItems.filter((item) => progress[item.id] === 'known').length;
   const themePracticeCount = themeItems.filter((item) => progress[item.id] === 'practice').length;
   const currentItem = promptOrder[matchIndex] ?? promptOrder[0] ?? themeItems[0];
@@ -589,8 +606,9 @@ export default function App() {
     setMissedThisLesson([]);
     setIsReviewRound(false);
     setJustMasteredTheme(null);
-    setPromptOrder(shuffleItems(themeItems));
-    setAnswerOrder(shuffleItems(themeItems));
+    const order = shuffleItems(themeItems);
+    setPromptOrder(order);
+    setAnswerOrder(buildAnswerOptions(order[0], themeItems, ANSWER_OPTIONS_CAP));
     setScreen('match');
   }
 
@@ -626,17 +644,18 @@ export default function App() {
       setTimeout(() => {
         if (matchIndex < promptOrder.length - 1) {
           setMatchIndex((index) => index + 1);
-          setAnswerOrder(shuffleItems(themeItems));
+          setAnswerOrder(buildAnswerOptions(promptOrder[matchIndex + 1], themeItems, ANSWER_OPTIONS_CAP));
           setSelectedAnswer(null);
           setFeedback('Tap what you hear.');
           return;
         }
 
         if (!isReviewRound && missedThisLesson.length > 0) {
+          const reviewOrder = shuffleItems(themeItems.filter((item) => missedThisLesson.includes(item.id)));
           setIsReviewRound(true);
           setMatchIndex(0);
-          setPromptOrder(shuffleItems(themeItems.filter((item) => missedThisLesson.includes(item.id))));
-          setAnswerOrder(shuffleItems(themeItems));
+          setPromptOrder(reviewOrder);
+          setAnswerOrder(buildAnswerOptions(reviewOrder[0], themeItems, ANSWER_OPTIONS_CAP));
           setSelectedAnswer(null);
           setFeedback('Review round: let\'s try those tricky words again.');
           return;
@@ -807,21 +826,21 @@ export default function App() {
             <View style={styles.homeHero}>
               <View style={styles.heroCopyWide}>
                 <Text style={styles.kicker}>Ready for a quick {languageMeta.name} game?</Text>
-                <Text style={styles.title}>Play the Food lesson</Text>
-                <Text style={styles.subtitle}>Hear {languageMeta.name}, tap the right tile, and help {characterMeta.name} pack a picnic.</Text>
+                <Text style={styles.title}>Play the {homeThemeMeta?.title ?? 'Food'} lesson</Text>
+                <Text style={styles.subtitle}>Hear {languageMeta.name}, tap the right tile — {homeThemeMeta?.subtitle ?? 'learn tasty everyday words'}.</Text>
               </View>
               <CharacterMascot character={character} mood="ready" language={language} />
             </View>
 
             <View style={styles.statsRow}>
-              <StatCard label="Words learned" value={`${foodLearnedCount}/${homeThemeItems.length}`} />
-              <StatCard label="Needs practice" value={`${foodPracticeCount}`} />
+              <StatCard label="Words learned" value={`${homeLearnedCount}/${homeThemeItems.length}`} />
+              <StatCard label="Needs practice" value={`${homePracticeCount}`} />
             </View>
 
             <PrimaryButton
-              label={foodLearnedCount > 0 ? 'Continue' : 'Start first lesson'}
+              label={homeLearnedCount > 0 ? 'Continue' : 'Start first lesson'}
               onPress={() => {
-                setActiveTheme('food');
+                setActiveTheme(homeThemeId);
                 setScreen('lesson');
               }}
             />
