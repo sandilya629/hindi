@@ -6,11 +6,13 @@ product
 
 ## Users
 
-Hindi Quest serves kids ages 5 to 12, parents learning alongside children, adult beginners, and heritage learners who want a gentle re-entry into Hindi. Users are usually in a short practice moment at home, on a couch, at a table, or during a family learning break. The core job is to hear Hindi, recognize the correct word or meaning, and feel rewarded enough to play one more short session.
+Hindi Quest serves young kids and toddlers first and foremost, alongside a parent or family member learning together. Users are usually in a short practice moment at home, on a couch, at a table, or during a family learning break. The core job is to hear the word spoken clearly and slowly, recognize the correct picture or meaning, and feel rewarded enough to play one more short session. Because the primary audience is toddlers, visuals must read as simple, bright, and unambiguous at a glance — see `DESIGN.md` for the concrete rule this produced (real photos rejected in favor of flat icon illustrations).
+
+Hindi Quest teaches both **Hindi and Tamil** — the two are fully independent tracks (separate content, separate progress, separate unlock state) selected once via a language picker, not a "kid vs adult" mode.
 
 ## Product Purpose
 
-Hindi Quest helps beginners learn Hindi through quick audio-first games. The first prototype proves whether a simple loop - hear Hindi, tap the right tile, complete a tiny mission, and unlock progress - is understandable and enjoyable for both kids and adults. Success means a first-time user can complete a Food lesson in under five minutes and voluntarily continue or replay.
+Hindi Quest helps beginners learn Hindi or Tamil through quick audio-first games. The core loop — hear the word, tap the right tile, complete a tiny mission, and unlock progress — should be understandable and enjoyable for a toddler with a parent alongside them. Success means a first-time user can complete a Food lesson in under five minutes and voluntarily continue or replay.
 
 ## Brand Personality
 
@@ -22,11 +24,11 @@ Do not make it look like a school worksheet, a dense flashcard deck, a generic l
 
 ## Design Principles
 
-1. Audio leads the lesson: every Hindi item should be hearable and replayable.
+1. Audio leads the lesson: every word should be hearable and replayable, spoken slowly and clearly enough for a toddler to follow.
 2. One action per screen: the next useful tap should be obvious.
 3. Reward effort, not perfection: mistakes should invite retry, not shame.
-4. Shared family core: kid and adult modes use the same content with optional adult supports.
-5. Friendly Hindi presence: Devanagari should be visible early, supported by audio and optional pronunciation help.
+4. Shared family core: a parent and child play the same content together; optional pronunciation help supports the adult, not a separate mode.
+5. Friendly script presence: Devanagari/Tamil script should be visible early, supported by audio and optional pronunciation help.
 
 ## Accessibility & Inclusion
 

@@ -27,17 +27,32 @@ Use a restrained product palette with playful accents. The base surface stays cl
 
 ## Typography
 
-Use the React Native system font stack for performance and familiarity. Devanagari text should render with the platform's Devanagari-capable system fallback. Keep headings friendly but not oversized. Buttons and labels use clear sentence case.
+Use the React Native system font stack for performance and familiarity. Devanagari and Tamil script text should render with the platform's script-capable system fallback. Keep headings friendly but not oversized. Buttons and labels use clear sentence case.
 
 ## Components
 
 - App shell: bright white background with soft color bands and generous spacing.
 - Primary button: honey-gold fill, dark ink text only on pale fills; white text on stronger saturated fills.
 - Secondary button: white surface, visible border, dark text.
-- Lesson cards: compact, rounded, colored, and image-led. Radius should stay moderate, not pill-like except for chips.
+- Lesson cards: compact, rounded, colored, and image-led. Radius should stay moderate, not pill-like except for chips. Keep the card frame itself small (tight padding) and let the icon be the dominant element — see Vocabulary Icons below.
 - Game tiles: large touch targets with clear selected/correct/needs-retry states.
 - Mithu mascot: simple 2D parrot built from rounded shapes; expressive but calm.
 - Progress chips: short labels with strong contrast and simple status language.
+
+## Vocabulary Icons
+
+Every concrete-noun word (Food, Family, Animals, Body, Clothes, Transport,
+Places, School) shows a large icon inside a colored circle (`FoodVisual` in
+App.tsx). **Use flat, bright, open-licensed icon illustrations (Twemoji or
+similar) — not real photographs.** This was tried and reverted: real stock
+photos (sourced from Pexels) kept surfacing as moody, macro, or otherwise
+adult-toned (extreme close-ups, intense animal faces, dim/grayscale shots),
+which reads as unsettling rather than friendly for a toddler audience. A
+simple cartoon icon is never scary, is always unambiguous at a glance, and
+stays visually consistent across all 70+ vocabulary items in a way that
+photos curated one-by-one can't. Colors/Numbers/Starter sounds keep their
+symbolic emoji/glyph treatment (a color swatch, a numeral, an actual letter)
+rather than an "icon" — there's no real-world object to depict for those.
 
 ## Layout
 
