@@ -863,33 +863,51 @@ export default function App() {
                 <Text style={styles.levelBadgeText}>Level {currentLevel(progress, language)}</Text>
               </View>
             </View>
-            <View style={styles.themeGrid}>
-              {themes.map((theme, index) => {
+            <View style={styles.themePath}>
+              <View style={styles.themePathLine} />
+              {themes.map((theme) => {
                 const playability = themePlayability(theme, progress, language);
-                const items = playability === 'ready' ? itemsForTheme(theme.id as ThemeId, language) : [];
+                const isReady = playability === 'ready';
+                const items = isReady ? itemsForTheme(theme.id as ThemeId, language) : [];
                 const learned = items.filter((item) => progress[item.id] === 'known').length;
-                const prevTheme = themes[index - 1];
+                const mastered = isReady && isThemeMastered(theme.id as ThemeId, progress, language);
+                const isCurrent = isReady && !mastered;
                 return (
                   <Pressable
                     key={theme.id}
-                    style={[styles.themeTile, playability !== 'ready' && styles.themeTileSoon]}
+                    disabled={!isReady}
+                    style={styles.themeNode}
                     onPress={() => {
-                      if (playability !== 'ready') return;
+                      if (!isReady) return;
                       setActiveTheme(theme.id as ThemeId);
                       setScreen('lesson');
                     }}
                     accessibilityRole="button"
                   >
-                    <View style={[styles.themeDot, { backgroundColor: theme.color }]} />
-                    <Text style={styles.themeTitle}>{theme.title}</Text>
-                    <Text style={styles.themeSubtitle}>{theme.subtitle}</Text>
-                    <Text style={playability === 'ready' ? styles.readyBadge : styles.soonBadge}>
-                      {playability === 'ready'
-                        ? `${learned}/${items.length} learned`
-                        : playability === 'locked'
-                          ? `Master ${prevTheme?.title ?? 'the previous theme'} to unlock`
-                          : 'Coming soon'}
-                    </Text>
+                    {isCurrent ? (
+                      <View style={styles.themeNodeHereBadge}>
+                        <Image source={characterImages[character]} style={styles.themeNodeHereAvatar} />
+                        <Text style={styles.themeNodeHereText}>{characterMeta.name} is here</Text>
+                      </View>
+                    ) : null}
+                    <View style={styles.themeNodeCircleWrap}>
+                      {isReady && items[0] ? (
+                        <FoodVisual item={items[0]} small={mastered} />
+                      ) : (
+                        <View style={styles.themeLockCircle}>
+                          <Text style={styles.themeLockIcon}>🔒</Text>
+                        </View>
+                      )}
+                      {mastered ? (
+                        <View style={styles.themeNodeCheckBadge}>
+                          <Text style={styles.themeNodeCheckText}>✓</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text style={[styles.themeNodeLabel, !isReady && styles.themeNodeLabelLocked]}>{theme.title}</Text>
+                    {isReady ? (
+                      <Text style={styles.themeNodeSublabel}>{learned}/{items.length} learned</Text>
+                    ) : null}
                   </Pressable>
                 );
               })}
@@ -1321,22 +1339,60 @@ const styles = StyleSheet.create({
   },
   statValue: { color: '#23613B', fontSize: 28, fontWeight: '900' },
   statLabel: { color: '#365444', fontSize: 13, fontWeight: '800', marginTop: 4 },
-  themeGrid: { gap: 12 },
-  themeTile: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#DDE4EC',
-    borderRadius: 18,
-    borderWidth: 1,
-    gap: 6,
-    minHeight: 132,
-    padding: 16,
+  themePath: { alignItems: 'center', gap: 28, paddingVertical: 8, position: 'relative' },
+  themePathLine: {
+    borderLeftColor: '#DDE4EC',
+    borderLeftWidth: 3,
+    borderStyle: 'dashed',
+    bottom: 40,
+    left: '50%',
+    position: 'absolute',
+    top: 40,
   },
-  themeTileSoon: { opacity: 0.72 },
-  themeDot: { borderRadius: 14, height: 28, width: 28 },
-  themeTitle: { color: '#24324C', fontSize: 22, fontWeight: '900' },
-  themeSubtitle: { color: '#596270', fontSize: 14, lineHeight: 20 },
-  readyBadge: { color: '#23613B', fontSize: 13, fontWeight: '900', marginTop: 4 },
-  soonBadge: { color: '#8C5B10', fontSize: 13, fontWeight: '900', marginTop: 4 },
+  themeNode: { alignItems: 'center', gap: 6 },
+  themeNodeHereBadge: {
+    alignItems: 'center',
+    backgroundColor: '#FFF8E1',
+    borderColor: '#F0D28A',
+    borderRadius: 999,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  themeNodeHereAvatar: { borderRadius: 10, height: 20, width: 20 },
+  themeNodeHereText: { color: '#8C5B10', fontSize: 12, fontWeight: '800' },
+  themeNodeCircleWrap: { position: 'relative' },
+  themeNodeCheckBadge: {
+    alignItems: 'center',
+    backgroundColor: '#3FA34D',
+    borderColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 2,
+    bottom: -2,
+    height: 22,
+    justifyContent: 'center',
+    position: 'absolute',
+    right: -2,
+    width: 22,
+  },
+  themeNodeCheckText: { color: '#FFFFFF', fontSize: 13, fontWeight: '900' },
+  themeLockCircle: {
+    alignItems: 'center',
+    backgroundColor: '#EDEFF3',
+    borderColor: '#DDE4EC',
+    borderRadius: 20,
+    borderWidth: 1,
+    height: 56,
+    justifyContent: 'center',
+    width: 56,
+  },
+  themeLockIcon: { fontSize: 22, opacity: 0.55 },
+  themeNodeLabel: { color: '#24324C', fontSize: 16, fontWeight: '800' },
+  themeNodeLabelLocked: { color: '#9AA3AF' },
+  themeNodeSublabel: { color: '#596270', fontSize: 12, fontWeight: '700' },
   levelBadge: {
     alignSelf: 'flex-start',
     backgroundColor: '#24324C',
