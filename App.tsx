@@ -78,7 +78,7 @@ type LessonItem = {
   emoji: string;
 };
 
-type ThemeId = 'food' | 'colors' | 'family' | 'sounds' | 'animals' | 'numbers' | 'body' | 'clothes' | 'transport' | 'places' | 'school';
+type ThemeId = 'food' | 'colors' | 'opposites' | 'family' | 'sounds' | 'animals' | 'numbers' | 'body' | 'clothes' | 'transport' | 'places' | 'school';
 
 type Theme = {
   id: string;
@@ -136,6 +136,35 @@ const colorItems: LessonItem[] = [
   { id: 'peela', word: 'पीला', language: 'hi', transliteration: 'peela', meaning: 'yellow', theme: 'Colors', color: '#F2C230', emoji: '🟡' },
   { id: 'hara', word: 'हरा', language: 'hi', transliteration: 'hara', meaning: 'green', theme: 'Colors', color: '#4CAF6D', emoji: '🟢' },
   { id: 'kaala', word: 'काला', language: 'hi', transliteration: 'kaala', meaning: 'black', theme: 'Colors', color: '#3A3A3A', emoji: '⚫' },
+];
+
+const oppositeItems: LessonItem[] = [
+  { id: 'din', word: 'दिन', language: 'hi', transliteration: 'din', meaning: 'day', theme: 'Opposites', color: '#F7D488', emoji: '☀️' },
+  { id: 'raat', word: 'रात', language: 'hi', transliteration: 'raat', meaning: 'night', theme: 'Opposites', color: '#5D6D9E', emoji: '🌙' },
+  { id: 'garam', word: 'गरम', language: 'hi', transliteration: 'garam', meaning: 'hot', theme: 'Opposites', color: '#E86A5A', emoji: '🔥' },
+  { id: 'thanda', word: 'ठंडा', language: 'hi', transliteration: 'thanda', meaning: 'cold', theme: 'Opposites', color: '#A8DCE8', emoji: '❄️' },
+  { id: 'oopar', word: 'ऊपर', language: 'hi', transliteration: 'oopar', meaning: 'up', theme: 'Opposites', color: '#8FC4E8', emoji: '⬆️' },
+  { id: 'neeche', word: 'नीचे', language: 'hi', transliteration: 'neeche', meaning: 'down', theme: 'Opposites', color: '#A8C48A', emoji: '⬇️' },
+  { id: 'bada', word: 'बड़ा', language: 'hi', transliteration: 'bada', meaning: 'big', theme: 'Opposites', color: '#A8B4C0', emoji: '🐘' },
+  { id: 'chota', word: 'छोटा', language: 'hi', transliteration: 'chota', meaning: 'small', theme: 'Opposites', color: '#E8C9A0', emoji: '🐜' },
+  { id: 'khush', word: 'खुश', language: 'hi', transliteration: 'khush', meaning: 'happy', theme: 'Opposites', color: '#F2C230', emoji: '😊' },
+  { id: 'udaas', word: 'उदास', language: 'hi', transliteration: 'udaas', meaning: 'sad', theme: 'Opposites', color: '#8FA0B8', emoji: '😢' },
+];
+
+// NOTE: sourced from common, well-established everyday Tamil vocabulary,
+// but not yet checked by a native speaker. Flagged for review before use
+// with real families.
+const tamilOppositeItems: LessonItem[] = [
+  { id: 'pagal', word: 'பகல்', language: 'ta', transliteration: 'pagal', meaning: 'day', theme: 'Opposites', color: '#F7D488', emoji: '☀️' },
+  { id: 'iravu', word: 'இரவு', language: 'ta', transliteration: 'iravu', meaning: 'night', theme: 'Opposites', color: '#5D6D9E', emoji: '🌙' },
+  { id: 'soodu', word: 'சூடு', language: 'ta', transliteration: 'soodu', meaning: 'hot', theme: 'Opposites', color: '#E86A5A', emoji: '🔥' },
+  { id: 'kulir', word: 'குளிர்', language: 'ta', transliteration: 'kulir', meaning: 'cold', theme: 'Opposites', color: '#A8DCE8', emoji: '❄️' },
+  { id: 'mele', word: 'மேலே', language: 'ta', transliteration: 'mele', meaning: 'up', theme: 'Opposites', color: '#8FC4E8', emoji: '⬆️' },
+  { id: 'keezhe', word: 'கீழே', language: 'ta', transliteration: 'keezhe', meaning: 'down', theme: 'Opposites', color: '#A8C48A', emoji: '⬇️' },
+  { id: 'periya', word: 'பெரிய', language: 'ta', transliteration: 'periya', meaning: 'big', theme: 'Opposites', color: '#A8B4C0', emoji: '🐘' },
+  { id: 'siriya', word: 'சிறிய', language: 'ta', transliteration: 'siriya', meaning: 'small', theme: 'Opposites', color: '#E8C9A0', emoji: '🐜' },
+  { id: 'santhosham', word: 'சந்தோஷம்', language: 'ta', transliteration: 'santhosham', meaning: 'happy', theme: 'Opposites', color: '#F2C230', emoji: '😊' },
+  { id: 'sokam', word: 'சோகம்', language: 'ta', transliteration: 'sokam', meaning: 'sad', theme: 'Opposites', color: '#8FA0B8', emoji: '😢' },
 ];
 
 const familyItems: LessonItem[] = [
@@ -348,6 +377,7 @@ function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
   if (language === 'ta') {
     if (themeId === 'food') return tamilFoodItems;
     if (themeId === 'colors') return tamilColorItems;
+    if (themeId === 'opposites') return tamilOppositeItems;
     if (themeId === 'family') return tamilFamilyItems;
     if (themeId === 'sounds') return tamilSoundItems;
     if (themeId === 'animals') return tamilAnimalItems;
@@ -360,6 +390,7 @@ function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
     return [];
   }
   if (themeId === 'colors') return colorItems;
+  if (themeId === 'opposites') return oppositeItems;
   if (themeId === 'family') return familyItems;
   if (themeId === 'sounds') return soundItems;
   if (themeId === 'animals') return animalItems;
@@ -375,6 +406,7 @@ function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
 const themes: Theme[] = [
   { id: 'food', title: 'Food', subtitle: 'Learn tasty everyday words', status: 'ready', color: '#F7B733' },
   { id: 'colors', title: 'Colors', subtitle: 'Paint with colorful words', status: 'ready', color: '#78C6E7' },
+  { id: 'opposites', title: 'Opposites', subtitle: "Discover words that don't match", status: 'ready', color: '#D46A9E' },
   { id: 'family', title: 'Family', subtitle: 'Words for people at home', status: 'ready', color: '#76B77C' },
   { id: 'sounds', title: 'Starter sounds', subtitle: 'Meet friendly letters', status: 'ready', color: '#E7755F' },
   { id: 'animals', title: 'Animals', subtitle: 'Meet furry, feathery friends', status: 'ready', color: '#D4A574' },
@@ -388,7 +420,7 @@ const themes: Theme[] = [
 
 // Order in which themes unlock. Themes with no real content yet (status
 // 'soon') aren't part of this sequence — they stay locked regardless.
-const themeUnlockOrder: ThemeId[] = ['food', 'colors', 'family', 'sounds', 'animals', 'numbers', 'body', 'clothes', 'transport', 'places', 'school'];
+const themeUnlockOrder: ThemeId[] = ['food', 'colors', 'opposites', 'family', 'sounds', 'animals', 'numbers', 'body', 'clothes', 'transport', 'places', 'school'];
 
 function isThemeMastered(themeId: ThemeId, progress: Progress, language: LanguageId): boolean {
   const items = itemsForTheme(themeId, language);
@@ -417,6 +449,7 @@ function currentThemeId(progress: Progress, language: LanguageId): ThemeId {
 const themeRewardName: Record<ThemeId, string> = {
   food: 'picnic basket',
   colors: 'color palette',
+  opposites: 'opposites poster',
   family: 'family photo album',
   sounds: 'sound chart',
   animals: 'animal sticker book',
@@ -431,6 +464,7 @@ const themeRewardName: Record<ThemeId, string> = {
 const themeUnitLabel: Record<ThemeId, string> = {
   food: 'words',
   colors: 'words',
+  opposites: 'words',
   family: 'words',
   sounds: 'sounds',
   animals: 'words',
@@ -443,7 +477,7 @@ const themeUnitLabel: Record<ThemeId, string> = {
 };
 
 const initialProgress: Progress = Object.fromEntries(
-  [...foodItems, ...colorItems, ...familyItems, ...soundItems, ...animalItems, ...numberItems, ...bodyItems, ...clothesItems, ...transportItems, ...placeItems, ...schoolItems, ...tamilFoodItems, ...tamilColorItems, ...tamilFamilyItems, ...tamilSoundItems, ...tamilAnimalItems, ...tamilNumberItems, ...tamilBodyItems, ...tamilClothesItems, ...tamilTransportItems, ...tamilPlaceItems, ...tamilSchoolItems].map((item) => [item.id, 'new']),
+  [...foodItems, ...colorItems, ...oppositeItems, ...familyItems, ...soundItems, ...animalItems, ...numberItems, ...bodyItems, ...clothesItems, ...transportItems, ...placeItems, ...schoolItems, ...tamilFoodItems, ...tamilColorItems, ...tamilOppositeItems, ...tamilFamilyItems, ...tamilSoundItems, ...tamilAnimalItems, ...tamilNumberItems, ...tamilBodyItems, ...tamilClothesItems, ...tamilTransportItems, ...tamilPlaceItems, ...tamilSchoolItems].map((item) => [item.id, 'new']),
 ) as Progress;
 
 const characters: { id: CharacterId; name: string; subtitle: string }[] = [
