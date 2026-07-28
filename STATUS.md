@@ -6,14 +6,21 @@ replaying the build history. See `PRODUCT.md` for the vision/audience and
 
 ## What's built
 
-Two languages, both at full content parity: **11 themes each**, unlocked
+Two languages, both at full content parity: **13 themes each**, unlocked
 sequentially in this order:
 
-`Food -> Colors -> Family -> Starter sounds -> Animals -> Numbers -> Body -> Clothes -> Transport -> Places -> School`
+`Food -> Colors -> Opposites -> Opposites Two -> Family -> Starter sounds -> Animals -> Numbers -> Body -> Clothes -> Transport -> Places -> School`
 
-Per-theme item counts (same for Hindi and Tamil): Food 6, Colors 5, Family 5,
-Starter sounds 10 (letters), Animals 6, Numbers 10, Body 6, Clothes 6,
-Transport 6, Places 6, School 6 — 72 items per language, 144 total.
+Per-theme item counts (same for Hindi and Tamil): Food 6, Colors 5,
+Opposites 10, Opposites Two 12, Family 5, Starter sounds 10 (letters),
+Animals 6, Numbers 10, Body 6, Clothes 6, Transport 6, Places 6, School 6 —
+94 items per language, 188 total. Both Opposites themes (day/night, hot/cold,
+up/down, big/small, happy/sad; then come/go, sit/stand, start/stop, here/
+there, front/back, open/close) came from direct kid feedback after playing
+the game — they're plain themes like any other (Match-and-Listen + optional
+Memory Pairs, no new game mechanic), using emoji glyphs rather than new icon
+assets since these are abstract/relational/action concepts, not concrete
+nouns (see Visual design below).
 
 A theme unlocks once every item in the previous theme is marked "known"
 (`isThemeMastered`). There are no sub-levels within a theme yet — see
@@ -46,6 +53,37 @@ the single biggest outstanding item.
 - `themeUnlockOrder`, `themeRewardName`, `themeUnitLabel` are the three
   `Record<ThemeId, ...>` maps to update whenever a new theme is added — the
   compiler enforces all three are exhaustive.
+- `currentThemeId(progress, language)` returns the first unmastered theme in
+  `themeUnlockOrder` (or the last theme once everything's mastered). The home
+  screen's Continue button, stats, and hero copy all derive from this — it
+  used to be hardcoded to `'food'`, which meant a returning player who'd
+  already mastered Food got dropped back into a finished lesson instead of
+  wherever they actually left off. Fixed; don't hardcode a theme id there again.
+- `ANSWER_OPTIONS_CAP = 6` caps how many tiles Match-and-Listen shows per
+  question via `buildAnswerOptions(correctItem, pool, cap)`, which always
+  includes the correct item plus random distractors up to the cap. Themes
+  with more than 6 items (Opposites, Opposites Two, Starter sounds, Numbers)
+  used to show every item as a simultaneous choice — too much visual scanning
+  for a toddler. The answer set is rebuilt fresh per question, not reused
+  across the round.
+
+## Gameplay flow (recent changes)
+
+- **Memory Pairs is optional, not mandatory.** Finishing Match-and-Listen
+  (plus any review round for missed words) now goes straight to the Reward
+  screen. Memory Pairs is offered there as a secondary "Play Memory Pairs
+  (optional)" button; finishing it voluntarily routes to Themes rather than
+  looping back to Reward. This was a deliberate cut for the 2-3-year-old
+  audience: pairs-matching is a harder working-memory task than word
+  recognition, and it was a fixed tax on every lesson regardless of theme
+  size.
+- **Themes screen is a winding path, not a grid.** Locked/current/mastered
+  state is now communicated through position, size, and a check/lock icon
+  instead of "Master X to unlock" prose (unreadable to this audience anyway).
+  Mastered stops are small with a green check badge; the current stop is
+  large with the selected mascot marked "is here"; locked stops are muted
+  with a lock glyph. Reuses `themePlayability`/`isThemeMastered` — no new
+  state.
 
 ## Visual design (recent change)
 
@@ -76,18 +114,30 @@ otherwise.**
 ## Audio
 
 `speakWord(text, language, onDone)` wraps `expo-speech`. Current constants
-(tuned down twice already after tester feedback that speech was too fast/
+(tuned down three times now after tester feedback that speech was too fast/
 clipped — don't re-raise these without a specific reason):
-- `SPEECH_RATE = 0.4` (normal words)
-- `SOUND_SPEECH_RATE = 0.26` (single-character Starter-sounds letters —
+- `SPEECH_RATE = 0.32` (normal words)
+- `SOUND_SPEECH_RATE = 0.22` (single-character Starter-sounds letters —
   stretched out further since one syllable at normal rate is too short to
   hear/repeat)
-- `MAX_SPEECH_WAIT_MS = 4500` — safety-net timeout in the Match-and-Listen
+- `MAX_SPEECH_WAIT_MS = 5500` — safety-net timeout in the Match-and-Listen
   answer flow, in case a device has no voice installed for the language and
   speech synthesis silently stalls. Keep this proportional to `SPEECH_RATE`
   if you slow speech down further — it must stay longer than the slowest
   real utterance takes to play, or the app will advance while audio is still
   playing.
+
+**Lesson learned, don't reintroduce this bug:** `speakWord` always calls
+`Speech.stop()` before speaking, which is correct for an explicit "tap to
+hear again" replay but was also firing from `handleAnswer`'s correct-answer
+confirmation replay — so a quick correct tap, landing before the question's
+initial auto-play finished, would cut the word off mid-syllable (reported as
+"doodh" clipping to "doo") and restart it. Fixed by checking
+`Speech.isSpeakingAsync()` first: if the initial auto-play is still going,
+skip the confirmation speak entirely and just let it finish undisturbed
+before advancing; only replay-as-confirmation when nothing is already
+playing. Verified in the browser by forcing `speechSynthesis.speaking` to
+`true` and confirming no interrupting `cancel()`/`speak()` pair fires.
 
 ## Deployment
 
@@ -120,16 +170,21 @@ clipped — don't re-raise these without a specific reason):
 
 ## Discussed but not built (raised in planning conversations, no code yet)
 
-- **Sub-levels within a theme.** If any theme's word count grows much past 6
-  (some already discussed at 10-12), doing them all in one sitting is a lot
-  for a toddler. The plan discussed: add a `level` field, batch ~5-6 words
-  per level, and decide broad-first (unlock level 1 of every theme before
-  any level 2) vs deep-first (finish all levels of one theme first) unlock
-  order. Recommended: broad-first (spiral curriculum).
-- **Splitting content out of App.tsx.** At ~150 content lines across 22
-  arrays (11 themes x 2 languages) this is still manageable inline, but if
+- **Sub-levels within a theme.** Four themes now sit at 10+ items (Opposites
+  10, Opposites Two 12, Starter sounds 10, Numbers 10) — the Match-and-Listen
+  *answer grid* is already capped at 6 tiles (see `ANSWER_OPTIONS_CAP`
+  above), but the *round itself* still asks every question in one sitting,
+  which is a lot for a toddler in one go, more so now that Opposites Two is
+  12 questions long. The plan discussed: add a `level` field, batch ~5-6
+  words per level, and decide broad-first (unlock level 1 of every theme
+  before any level 2) vs deep-first (finish all levels of one theme first)
+  unlock order. Recommended: broad-first (spiral curriculum).
+- **Splitting content out of App.tsx.** At ~230 content lines across 26
+  arrays (13 themes x 2 languages) this is still manageable inline, but if
   it keeps growing, move to `content/hi/<theme>.ts` / `content/ta/<theme>.ts`
   modules instead of one giant file. Not a database — this is static,
   rarely-changing, curated content; a real backend would be solving a
   problem this app doesn't have.
-- **Next themes beyond the current 11** haven't been chosen yet.
+- **Next themes beyond the current 13** haven't been chosen yet. Both
+  Opposites themes came from direct kid feedback rather than a planning
+  conversation — worth staying open to that channel for future theme ideas.

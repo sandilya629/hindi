@@ -19,11 +19,14 @@ const REACTION_PAUSE_MS = 1800;
 // Raised alongside the slower rates below so this safety-net timeout (for
 // devices with no voice installed) doesn't fire before normal, slow speech
 // actually finishes on a working device.
-const MAX_SPEECH_WAIT_MS = 4500;
-const SPEECH_RATE = 0.4;
+const MAX_SPEECH_WAIT_MS = 5500;
+// Tuned down a third time after feedback that words were being cut short
+// mid-syllable (e.g. "doodh" clipping to "doo") — parents want the whole
+// word fully sounded out, not just faster recognition.
+const SPEECH_RATE = 0.32;
 // Single letters/sounds get an even slower rate so the one utterance is
 // stretched out and easy to sound along with, instead of being repeated.
-const SOUND_SPEECH_RATE = 0.26;
+const SOUND_SPEECH_RATE = 0.22;
 // Themes with more than this many words (Numbers, Starter sounds have 10)
 // still only show this many answer tiles per question — a toddler scanning
 // a wall of tiles for the right one loses more than they gain from extra
@@ -78,7 +81,7 @@ type LessonItem = {
   emoji: string;
 };
 
-type ThemeId = 'food' | 'colors' | 'opposites' | 'family' | 'sounds' | 'animals' | 'numbers' | 'body' | 'clothes' | 'transport' | 'places' | 'school';
+type ThemeId = 'food' | 'colors' | 'opposites' | 'opposites2' | 'family' | 'sounds' | 'animals' | 'numbers' | 'body' | 'clothes' | 'transport' | 'places' | 'school';
 
 type Theme = {
   id: string;
@@ -165,6 +168,39 @@ const tamilOppositeItems: LessonItem[] = [
   { id: 'siriya', word: 'சிறிய', language: 'ta', transliteration: 'siriya', meaning: 'small', theme: 'Opposites', color: '#E8C9A0', emoji: '🐜' },
   { id: 'santhosham', word: 'சந்தோஷம்', language: 'ta', transliteration: 'santhosham', meaning: 'happy', theme: 'Opposites', color: '#F2C230', emoji: '😊' },
   { id: 'sokam', word: 'சோகம்', language: 'ta', transliteration: 'sokam', meaning: 'sad', theme: 'Opposites', color: '#8FA0B8', emoji: '😢' },
+];
+
+const oppositeTwoItems: LessonItem[] = [
+  { id: 'aao', word: 'आओ', language: 'hi', transliteration: 'aao', meaning: 'come', theme: 'Opposites Two', color: '#8FC4E8', emoji: '👋' },
+  { id: 'jaao', word: 'जाओ', language: 'hi', transliteration: 'jaao', meaning: 'go', theme: 'Opposites Two', color: '#A8C48A', emoji: '🚶' },
+  { id: 'baitho', word: 'बैठो', language: 'hi', transliteration: 'baitho', meaning: 'sit down', theme: 'Opposites Two', color: '#D9A45C', emoji: '🪑' },
+  { id: 'utho', word: 'उठो', language: 'hi', transliteration: 'utho', meaning: 'get up', theme: 'Opposites Two', color: '#F2C230', emoji: '🧍' },
+  { id: 'shuru', word: 'शुरू', language: 'hi', transliteration: 'shuru', meaning: 'start', theme: 'Opposites Two', color: '#6EC67E', emoji: '▶️' },
+  { id: 'ruko', word: 'रुको', language: 'hi', transliteration: 'ruko', meaning: 'stop', theme: 'Opposites Two', color: '#E86A5A', emoji: '✋' },
+  { id: 'yahaan', word: 'यहाँ', language: 'hi', transliteration: 'yahaan', meaning: 'here', theme: 'Opposites Two', color: '#E85D8A', emoji: '📍' },
+  { id: 'vahaan', word: 'वहाँ', language: 'hi', transliteration: 'vahaan', meaning: 'there', theme: 'Opposites Two', color: '#8FA0D9', emoji: '👉' },
+  { id: 'aage', word: 'आगे', language: 'hi', transliteration: 'aage', meaning: 'front', theme: 'Opposites Two', color: '#5D8AA8', emoji: '➡️' },
+  { id: 'peeche', word: 'पीछे', language: 'hi', transliteration: 'peeche', meaning: 'back', theme: 'Opposites Two', color: '#A8B4C0', emoji: '⬅️' },
+  { id: 'kholo', word: 'खोलो', language: 'hi', transliteration: 'kholo', meaning: 'open', theme: 'Opposites Two', color: '#F2D06B', emoji: '📂' },
+  { id: 'bandkaro', word: 'बंद करो', language: 'hi', transliteration: 'band karo', meaning: 'close', theme: 'Opposites Two', color: '#C9A0E0', emoji: '📁' },
+];
+
+// NOTE: sourced from common, well-established everyday Tamil vocabulary,
+// but not yet checked by a native speaker. Flagged for review before use
+// with real families.
+const tamilOppositeTwoItems: LessonItem[] = [
+  { id: 'vaa', word: 'வா', language: 'ta', transliteration: 'vaa', meaning: 'come', theme: 'Opposites Two', color: '#8FC4E8', emoji: '👋' },
+  { id: 'po', word: 'போ', language: 'ta', transliteration: 'po', meaning: 'go', theme: 'Opposites Two', color: '#A8C48A', emoji: '🚶' },
+  { id: 'utkaaru', word: 'உட்காரு', language: 'ta', transliteration: 'utkaaru', meaning: 'sit down', theme: 'Opposites Two', color: '#D9A45C', emoji: '🪑' },
+  { id: 'ezhundhiru', word: 'எழுந்திரு', language: 'ta', transliteration: 'ezhundhiru', meaning: 'get up', theme: 'Opposites Two', color: '#F2C230', emoji: '🧍' },
+  { id: 'thodangu', word: 'தொடங்கு', language: 'ta', transliteration: 'thodangu', meaning: 'start', theme: 'Opposites Two', color: '#6EC67E', emoji: '▶️' },
+  { id: 'nil', word: 'நில்', language: 'ta', transliteration: 'nil', meaning: 'stop', theme: 'Opposites Two', color: '#E86A5A', emoji: '✋' },
+  { id: 'inge', word: 'இங்கே', language: 'ta', transliteration: 'inge', meaning: 'here', theme: 'Opposites Two', color: '#E85D8A', emoji: '📍' },
+  { id: 'ange', word: 'அங்கே', language: 'ta', transliteration: 'ange', meaning: 'there', theme: 'Opposites Two', color: '#8FA0D9', emoji: '👉' },
+  { id: 'munne', word: 'முன்னே', language: 'ta', transliteration: 'munne', meaning: 'front', theme: 'Opposites Two', color: '#5D8AA8', emoji: '➡️' },
+  { id: 'pinne', word: 'பின்னே', language: 'ta', transliteration: 'pinne', meaning: 'back', theme: 'Opposites Two', color: '#A8B4C0', emoji: '⬅️' },
+  { id: 'thira', word: 'திற', language: 'ta', transliteration: 'thira', meaning: 'open', theme: 'Opposites Two', color: '#F2D06B', emoji: '📂' },
+  { id: 'moodu', word: 'மூடு', language: 'ta', transliteration: 'moodu', meaning: 'close', theme: 'Opposites Two', color: '#C9A0E0', emoji: '📁' },
 ];
 
 const familyItems: LessonItem[] = [
@@ -378,6 +414,7 @@ function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
     if (themeId === 'food') return tamilFoodItems;
     if (themeId === 'colors') return tamilColorItems;
     if (themeId === 'opposites') return tamilOppositeItems;
+    if (themeId === 'opposites2') return tamilOppositeTwoItems;
     if (themeId === 'family') return tamilFamilyItems;
     if (themeId === 'sounds') return tamilSoundItems;
     if (themeId === 'animals') return tamilAnimalItems;
@@ -391,6 +428,7 @@ function itemsForTheme(themeId: ThemeId, language: LanguageId): LessonItem[] {
   }
   if (themeId === 'colors') return colorItems;
   if (themeId === 'opposites') return oppositeItems;
+  if (themeId === 'opposites2') return oppositeTwoItems;
   if (themeId === 'family') return familyItems;
   if (themeId === 'sounds') return soundItems;
   if (themeId === 'animals') return animalItems;
@@ -407,6 +445,7 @@ const themes: Theme[] = [
   { id: 'food', title: 'Food', subtitle: 'Learn tasty everyday words', status: 'ready', color: '#F7B733' },
   { id: 'colors', title: 'Colors', subtitle: 'Paint with colorful words', status: 'ready', color: '#78C6E7' },
   { id: 'opposites', title: 'Opposites', subtitle: "Discover words that don't match", status: 'ready', color: '#D46A9E' },
+  { id: 'opposites2', title: 'Opposites Two', subtitle: 'More opposite words to discover', status: 'ready', color: '#E8C547' },
   { id: 'family', title: 'Family', subtitle: 'Words for people at home', status: 'ready', color: '#76B77C' },
   { id: 'sounds', title: 'Starter sounds', subtitle: 'Meet friendly letters', status: 'ready', color: '#E7755F' },
   { id: 'animals', title: 'Animals', subtitle: 'Meet furry, feathery friends', status: 'ready', color: '#D4A574' },
@@ -420,7 +459,7 @@ const themes: Theme[] = [
 
 // Order in which themes unlock. Themes with no real content yet (status
 // 'soon') aren't part of this sequence — they stay locked regardless.
-const themeUnlockOrder: ThemeId[] = ['food', 'colors', 'opposites', 'family', 'sounds', 'animals', 'numbers', 'body', 'clothes', 'transport', 'places', 'school'];
+const themeUnlockOrder: ThemeId[] = ['food', 'colors', 'opposites', 'opposites2', 'family', 'sounds', 'animals', 'numbers', 'body', 'clothes', 'transport', 'places', 'school'];
 
 function isThemeMastered(themeId: ThemeId, progress: Progress, language: LanguageId): boolean {
   const items = itemsForTheme(themeId, language);
@@ -450,6 +489,7 @@ const themeRewardName: Record<ThemeId, string> = {
   food: 'picnic basket',
   colors: 'color palette',
   opposites: 'opposites poster',
+  opposites2: 'action word cards',
   family: 'family photo album',
   sounds: 'sound chart',
   animals: 'animal sticker book',
@@ -465,6 +505,7 @@ const themeUnitLabel: Record<ThemeId, string> = {
   food: 'words',
   colors: 'words',
   opposites: 'words',
+  opposites2: 'words',
   family: 'words',
   sounds: 'sounds',
   animals: 'words',
@@ -477,7 +518,7 @@ const themeUnitLabel: Record<ThemeId, string> = {
 };
 
 const initialProgress: Progress = Object.fromEntries(
-  [...foodItems, ...colorItems, ...oppositeItems, ...familyItems, ...soundItems, ...animalItems, ...numberItems, ...bodyItems, ...clothesItems, ...transportItems, ...placeItems, ...schoolItems, ...tamilFoodItems, ...tamilColorItems, ...tamilOppositeItems, ...tamilFamilyItems, ...tamilSoundItems, ...tamilAnimalItems, ...tamilNumberItems, ...tamilBodyItems, ...tamilClothesItems, ...tamilTransportItems, ...tamilPlaceItems, ...tamilSchoolItems].map((item) => [item.id, 'new']),
+  [...foodItems, ...colorItems, ...oppositeItems, ...oppositeTwoItems, ...familyItems, ...soundItems, ...animalItems, ...numberItems, ...bodyItems, ...clothesItems, ...transportItems, ...placeItems, ...schoolItems, ...tamilFoodItems, ...tamilColorItems, ...tamilOppositeItems, ...tamilOppositeTwoItems, ...tamilFamilyItems, ...tamilSoundItems, ...tamilAnimalItems, ...tamilNumberItems, ...tamilBodyItems, ...tamilClothesItems, ...tamilTransportItems, ...tamilPlaceItems, ...tamilSchoolItems].map((item) => [item.id, 'new']),
 ) as Progress;
 
 const characters: { id: CharacterId; name: string; subtitle: string }[] = [
@@ -701,11 +742,21 @@ export default function App() {
       }, REACTION_PAUSE_MS);
     };
 
-    // Advance once the word finishes playing, but never wait longer than
-    // MAX_SPEECH_WAIT_MS in case the device has no voice installed for this
-    // language and speech synthesis stalls instead of erroring out quickly.
-    speakWord(currentItem.word, currentItem.language, advanceToNext);
-    setTimeout(advanceToNext, MAX_SPEECH_WAIT_MS);
+    // Replay the word as confirmation, then advance once it finishes playing
+    // (never waiting longer than MAX_SPEECH_WAIT_MS in case the device has
+    // no voice installed and speech synthesis silently stalls). If the
+    // question's initial auto-play is still going — a quick correct tap can
+    // easily land before it finishes — don't call speakWord again: it stops
+    // whatever is currently playing first, which was cutting the word off
+    // mid-syllable. Just let the in-flight audio finish undisturbed.
+    Speech.isSpeakingAsync().then((isSpeaking) => {
+      if (isSpeaking) {
+        advanceToNext();
+        return;
+      }
+      speakWord(currentItem.word, currentItem.language, advanceToNext);
+      setTimeout(advanceToNext, MAX_SPEECH_WAIT_MS);
+    });
   }
 
   function startMemoryPairs() {
