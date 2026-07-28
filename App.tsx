@@ -65,7 +65,7 @@ function buildAnswerOptions(correctItem: LessonItem, pool: LessonItem[], cap: nu
   return shuffleItems([correctItem, ...distractors]);
 }
 
-type Screen = 'onboarding' | 'home' | 'themes' | 'lesson' | 'match' | 'memory' | 'reward' | 'progress';
+type Screen = 'onboarding' | 'home' | 'themes' | 'lesson' | 'match' | 'memory' | 'opposite' | 'reward' | 'progress';
 type ItemStatus = 'new' | 'known' | 'practice';
 type CharacterId = 'mithu' | 'bunny' | 'golu';
 type CharacterMood = 'hello' | 'ready' | 'speak' | 'happy';
@@ -79,6 +79,9 @@ type LessonItem = {
   theme: string;
   color: string;
   emoji: string;
+  // Id of this item's opposite within the same theme/language. Only set on
+  // Opposites/Opposites Two items — powers the "Find the Opposite" game.
+  oppositeId?: string;
 };
 
 type ThemeId = 'food' | 'colors' | 'opposites' | 'opposites2' | 'family' | 'sounds' | 'animals' | 'numbers' | 'body' | 'clothes' | 'transport' | 'places' | 'school';
@@ -142,65 +145,65 @@ const colorItems: LessonItem[] = [
 ];
 
 const oppositeItems: LessonItem[] = [
-  { id: 'din', word: 'दिन', language: 'hi', transliteration: 'din', meaning: 'day', theme: 'Opposites', color: '#F7D488', emoji: '☀️' },
-  { id: 'raat', word: 'रात', language: 'hi', transliteration: 'raat', meaning: 'night', theme: 'Opposites', color: '#5D6D9E', emoji: '🌙' },
-  { id: 'garam', word: 'गरम', language: 'hi', transliteration: 'garam', meaning: 'hot', theme: 'Opposites', color: '#E86A5A', emoji: '🔥' },
-  { id: 'thanda', word: 'ठंडा', language: 'hi', transliteration: 'thanda', meaning: 'cold', theme: 'Opposites', color: '#A8DCE8', emoji: '❄️' },
-  { id: 'oopar', word: 'ऊपर', language: 'hi', transliteration: 'oopar', meaning: 'up', theme: 'Opposites', color: '#8FC4E8', emoji: '⬆️' },
-  { id: 'neeche', word: 'नीचे', language: 'hi', transliteration: 'neeche', meaning: 'down', theme: 'Opposites', color: '#A8C48A', emoji: '⬇️' },
-  { id: 'bada', word: 'बड़ा', language: 'hi', transliteration: 'bada', meaning: 'big', theme: 'Opposites', color: '#A8B4C0', emoji: '🐘' },
-  { id: 'chota', word: 'छोटा', language: 'hi', transliteration: 'chota', meaning: 'small', theme: 'Opposites', color: '#E8C9A0', emoji: '🐜' },
-  { id: 'khush', word: 'खुश', language: 'hi', transliteration: 'khush', meaning: 'happy', theme: 'Opposites', color: '#F2C230', emoji: '😊' },
-  { id: 'udaas', word: 'उदास', language: 'hi', transliteration: 'udaas', meaning: 'sad', theme: 'Opposites', color: '#8FA0B8', emoji: '😢' },
+  { id: 'din', word: 'दिन', language: 'hi', transliteration: 'din', meaning: 'day', theme: 'Opposites', color: '#F7D488', emoji: '☀️', oppositeId: 'raat' },
+  { id: 'raat', word: 'रात', language: 'hi', transliteration: 'raat', meaning: 'night', theme: 'Opposites', color: '#5D6D9E', emoji: '🌙', oppositeId: 'din' },
+  { id: 'garam', word: 'गरम', language: 'hi', transliteration: 'garam', meaning: 'hot', theme: 'Opposites', color: '#E86A5A', emoji: '🔥', oppositeId: 'thanda' },
+  { id: 'thanda', word: 'ठंडा', language: 'hi', transliteration: 'thanda', meaning: 'cold', theme: 'Opposites', color: '#A8DCE8', emoji: '❄️', oppositeId: 'garam' },
+  { id: 'oopar', word: 'ऊपर', language: 'hi', transliteration: 'oopar', meaning: 'up', theme: 'Opposites', color: '#8FC4E8', emoji: '⬆️', oppositeId: 'neeche' },
+  { id: 'neeche', word: 'नीचे', language: 'hi', transliteration: 'neeche', meaning: 'down', theme: 'Opposites', color: '#A8C48A', emoji: '⬇️', oppositeId: 'oopar' },
+  { id: 'bada', word: 'बड़ा', language: 'hi', transliteration: 'bada', meaning: 'big', theme: 'Opposites', color: '#A8B4C0', emoji: '🐘', oppositeId: 'chota' },
+  { id: 'chota', word: 'छोटा', language: 'hi', transliteration: 'chota', meaning: 'small', theme: 'Opposites', color: '#E8C9A0', emoji: '🐜', oppositeId: 'bada' },
+  { id: 'khush', word: 'खुश', language: 'hi', transliteration: 'khush', meaning: 'happy', theme: 'Opposites', color: '#F2C230', emoji: '😊', oppositeId: 'udaas' },
+  { id: 'udaas', word: 'उदास', language: 'hi', transliteration: 'udaas', meaning: 'sad', theme: 'Opposites', color: '#8FA0B8', emoji: '😢', oppositeId: 'khush' },
 ];
 
 // NOTE: sourced from common, well-established everyday Tamil vocabulary,
 // but not yet checked by a native speaker. Flagged for review before use
 // with real families.
 const tamilOppositeItems: LessonItem[] = [
-  { id: 'pagal', word: 'பகல்', language: 'ta', transliteration: 'pagal', meaning: 'day', theme: 'Opposites', color: '#F7D488', emoji: '☀️' },
-  { id: 'iravu', word: 'இரவு', language: 'ta', transliteration: 'iravu', meaning: 'night', theme: 'Opposites', color: '#5D6D9E', emoji: '🌙' },
-  { id: 'soodu', word: 'சூடு', language: 'ta', transliteration: 'soodu', meaning: 'hot', theme: 'Opposites', color: '#E86A5A', emoji: '🔥' },
-  { id: 'kulir', word: 'குளிர்', language: 'ta', transliteration: 'kulir', meaning: 'cold', theme: 'Opposites', color: '#A8DCE8', emoji: '❄️' },
-  { id: 'mele', word: 'மேலே', language: 'ta', transliteration: 'mele', meaning: 'up', theme: 'Opposites', color: '#8FC4E8', emoji: '⬆️' },
-  { id: 'keezhe', word: 'கீழே', language: 'ta', transliteration: 'keezhe', meaning: 'down', theme: 'Opposites', color: '#A8C48A', emoji: '⬇️' },
-  { id: 'periya', word: 'பெரிய', language: 'ta', transliteration: 'periya', meaning: 'big', theme: 'Opposites', color: '#A8B4C0', emoji: '🐘' },
-  { id: 'siriya', word: 'சிறிய', language: 'ta', transliteration: 'siriya', meaning: 'small', theme: 'Opposites', color: '#E8C9A0', emoji: '🐜' },
-  { id: 'santhosham', word: 'சந்தோஷம்', language: 'ta', transliteration: 'santhosham', meaning: 'happy', theme: 'Opposites', color: '#F2C230', emoji: '😊' },
-  { id: 'sokam', word: 'சோகம்', language: 'ta', transliteration: 'sokam', meaning: 'sad', theme: 'Opposites', color: '#8FA0B8', emoji: '😢' },
+  { id: 'pagal', word: 'பகல்', language: 'ta', transliteration: 'pagal', meaning: 'day', theme: 'Opposites', color: '#F7D488', emoji: '☀️', oppositeId: 'iravu' },
+  { id: 'iravu', word: 'இரவு', language: 'ta', transliteration: 'iravu', meaning: 'night', theme: 'Opposites', color: '#5D6D9E', emoji: '🌙', oppositeId: 'pagal' },
+  { id: 'soodu', word: 'சூடு', language: 'ta', transliteration: 'soodu', meaning: 'hot', theme: 'Opposites', color: '#E86A5A', emoji: '🔥', oppositeId: 'kulir' },
+  { id: 'kulir', word: 'குளிர்', language: 'ta', transliteration: 'kulir', meaning: 'cold', theme: 'Opposites', color: '#A8DCE8', emoji: '❄️', oppositeId: 'soodu' },
+  { id: 'mele', word: 'மேலே', language: 'ta', transliteration: 'mele', meaning: 'up', theme: 'Opposites', color: '#8FC4E8', emoji: '⬆️', oppositeId: 'keezhe' },
+  { id: 'keezhe', word: 'கீழே', language: 'ta', transliteration: 'keezhe', meaning: 'down', theme: 'Opposites', color: '#A8C48A', emoji: '⬇️', oppositeId: 'mele' },
+  { id: 'periya', word: 'பெரிய', language: 'ta', transliteration: 'periya', meaning: 'big', theme: 'Opposites', color: '#A8B4C0', emoji: '🐘', oppositeId: 'siriya' },
+  { id: 'siriya', word: 'சிறிய', language: 'ta', transliteration: 'siriya', meaning: 'small', theme: 'Opposites', color: '#E8C9A0', emoji: '🐜', oppositeId: 'periya' },
+  { id: 'santhosham', word: 'சந்தோஷம்', language: 'ta', transliteration: 'santhosham', meaning: 'happy', theme: 'Opposites', color: '#F2C230', emoji: '😊', oppositeId: 'sokam' },
+  { id: 'sokam', word: 'சோகம்', language: 'ta', transliteration: 'sokam', meaning: 'sad', theme: 'Opposites', color: '#8FA0B8', emoji: '😢', oppositeId: 'santhosham' },
 ];
 
 const oppositeTwoItems: LessonItem[] = [
-  { id: 'aao', word: 'आओ', language: 'hi', transliteration: 'aao', meaning: 'come', theme: 'Opposites Two', color: '#8FC4E8', emoji: '👋' },
-  { id: 'jaao', word: 'जाओ', language: 'hi', transliteration: 'jaao', meaning: 'go', theme: 'Opposites Two', color: '#A8C48A', emoji: '🚶' },
-  { id: 'baitho', word: 'बैठो', language: 'hi', transliteration: 'baitho', meaning: 'sit down', theme: 'Opposites Two', color: '#D9A45C', emoji: '🪑' },
-  { id: 'utho', word: 'उठो', language: 'hi', transliteration: 'utho', meaning: 'get up', theme: 'Opposites Two', color: '#F2C230', emoji: '🧍' },
-  { id: 'shuru', word: 'शुरू', language: 'hi', transliteration: 'shuru', meaning: 'start', theme: 'Opposites Two', color: '#6EC67E', emoji: '▶️' },
-  { id: 'ruko', word: 'रुको', language: 'hi', transliteration: 'ruko', meaning: 'stop', theme: 'Opposites Two', color: '#E86A5A', emoji: '✋' },
-  { id: 'yahaan', word: 'यहाँ', language: 'hi', transliteration: 'yahaan', meaning: 'here', theme: 'Opposites Two', color: '#E85D8A', emoji: '📍' },
-  { id: 'vahaan', word: 'वहाँ', language: 'hi', transliteration: 'vahaan', meaning: 'there', theme: 'Opposites Two', color: '#8FA0D9', emoji: '👉' },
-  { id: 'aage', word: 'आगे', language: 'hi', transliteration: 'aage', meaning: 'front', theme: 'Opposites Two', color: '#5D8AA8', emoji: '➡️' },
-  { id: 'peeche', word: 'पीछे', language: 'hi', transliteration: 'peeche', meaning: 'back', theme: 'Opposites Two', color: '#A8B4C0', emoji: '⬅️' },
-  { id: 'kholo', word: 'खोलो', language: 'hi', transliteration: 'kholo', meaning: 'open', theme: 'Opposites Two', color: '#F2D06B', emoji: '📂' },
-  { id: 'bandkaro', word: 'बंद करो', language: 'hi', transliteration: 'band karo', meaning: 'close', theme: 'Opposites Two', color: '#C9A0E0', emoji: '📁' },
+  { id: 'aao', word: 'आओ', language: 'hi', transliteration: 'aao', meaning: 'come', theme: 'Opposites Two', color: '#8FC4E8', emoji: '👋', oppositeId: 'jaao' },
+  { id: 'jaao', word: 'जाओ', language: 'hi', transliteration: 'jaao', meaning: 'go', theme: 'Opposites Two', color: '#A8C48A', emoji: '🚶', oppositeId: 'aao' },
+  { id: 'baitho', word: 'बैठो', language: 'hi', transliteration: 'baitho', meaning: 'sit down', theme: 'Opposites Two', color: '#D9A45C', emoji: '🪑', oppositeId: 'utho' },
+  { id: 'utho', word: 'उठो', language: 'hi', transliteration: 'utho', meaning: 'get up', theme: 'Opposites Two', color: '#F2C230', emoji: '🧍', oppositeId: 'baitho' },
+  { id: 'shuru', word: 'शुरू', language: 'hi', transliteration: 'shuru', meaning: 'start', theme: 'Opposites Two', color: '#6EC67E', emoji: '▶️', oppositeId: 'ruko' },
+  { id: 'ruko', word: 'रुको', language: 'hi', transliteration: 'ruko', meaning: 'stop', theme: 'Opposites Two', color: '#E86A5A', emoji: '✋', oppositeId: 'shuru' },
+  { id: 'yahaan', word: 'यहाँ', language: 'hi', transliteration: 'yahaan', meaning: 'here', theme: 'Opposites Two', color: '#E85D8A', emoji: '📍', oppositeId: 'vahaan' },
+  { id: 'vahaan', word: 'वहाँ', language: 'hi', transliteration: 'vahaan', meaning: 'there', theme: 'Opposites Two', color: '#8FA0D9', emoji: '👉', oppositeId: 'yahaan' },
+  { id: 'aage', word: 'आगे', language: 'hi', transliteration: 'aage', meaning: 'front', theme: 'Opposites Two', color: '#5D8AA8', emoji: '➡️', oppositeId: 'peeche' },
+  { id: 'peeche', word: 'पीछे', language: 'hi', transliteration: 'peeche', meaning: 'back', theme: 'Opposites Two', color: '#A8B4C0', emoji: '⬅️', oppositeId: 'aage' },
+  { id: 'kholo', word: 'खोलो', language: 'hi', transliteration: 'kholo', meaning: 'open', theme: 'Opposites Two', color: '#F2D06B', emoji: '📂', oppositeId: 'bandkaro' },
+  { id: 'bandkaro', word: 'बंद करो', language: 'hi', transliteration: 'band karo', meaning: 'close', theme: 'Opposites Two', color: '#C9A0E0', emoji: '📁', oppositeId: 'kholo' },
 ];
 
 // NOTE: sourced from common, well-established everyday Tamil vocabulary,
 // but not yet checked by a native speaker. Flagged for review before use
 // with real families.
 const tamilOppositeTwoItems: LessonItem[] = [
-  { id: 'vaa', word: 'வா', language: 'ta', transliteration: 'vaa', meaning: 'come', theme: 'Opposites Two', color: '#8FC4E8', emoji: '👋' },
-  { id: 'po', word: 'போ', language: 'ta', transliteration: 'po', meaning: 'go', theme: 'Opposites Two', color: '#A8C48A', emoji: '🚶' },
-  { id: 'utkaaru', word: 'உட்காரு', language: 'ta', transliteration: 'utkaaru', meaning: 'sit down', theme: 'Opposites Two', color: '#D9A45C', emoji: '🪑' },
-  { id: 'ezhundhiru', word: 'எழுந்திரு', language: 'ta', transliteration: 'ezhundhiru', meaning: 'get up', theme: 'Opposites Two', color: '#F2C230', emoji: '🧍' },
-  { id: 'thodangu', word: 'தொடங்கு', language: 'ta', transliteration: 'thodangu', meaning: 'start', theme: 'Opposites Two', color: '#6EC67E', emoji: '▶️' },
-  { id: 'nil', word: 'நில்', language: 'ta', transliteration: 'nil', meaning: 'stop', theme: 'Opposites Two', color: '#E86A5A', emoji: '✋' },
-  { id: 'inge', word: 'இங்கே', language: 'ta', transliteration: 'inge', meaning: 'here', theme: 'Opposites Two', color: '#E85D8A', emoji: '📍' },
-  { id: 'ange', word: 'அங்கே', language: 'ta', transliteration: 'ange', meaning: 'there', theme: 'Opposites Two', color: '#8FA0D9', emoji: '👉' },
-  { id: 'munne', word: 'முன்னே', language: 'ta', transliteration: 'munne', meaning: 'front', theme: 'Opposites Two', color: '#5D8AA8', emoji: '➡️' },
-  { id: 'pinne', word: 'பின்னே', language: 'ta', transliteration: 'pinne', meaning: 'back', theme: 'Opposites Two', color: '#A8B4C0', emoji: '⬅️' },
-  { id: 'thira', word: 'திற', language: 'ta', transliteration: 'thira', meaning: 'open', theme: 'Opposites Two', color: '#F2D06B', emoji: '📂' },
-  { id: 'moodu', word: 'மூடு', language: 'ta', transliteration: 'moodu', meaning: 'close', theme: 'Opposites Two', color: '#C9A0E0', emoji: '📁' },
+  { id: 'vaa', word: 'வா', language: 'ta', transliteration: 'vaa', meaning: 'come', theme: 'Opposites Two', color: '#8FC4E8', emoji: '👋', oppositeId: 'po' },
+  { id: 'po', word: 'போ', language: 'ta', transliteration: 'po', meaning: 'go', theme: 'Opposites Two', color: '#A8C48A', emoji: '🚶', oppositeId: 'vaa' },
+  { id: 'utkaaru', word: 'உட்காரு', language: 'ta', transliteration: 'utkaaru', meaning: 'sit down', theme: 'Opposites Two', color: '#D9A45C', emoji: '🪑', oppositeId: 'ezhundhiru' },
+  { id: 'ezhundhiru', word: 'எழுந்திரு', language: 'ta', transliteration: 'ezhundhiru', meaning: 'get up', theme: 'Opposites Two', color: '#F2C230', emoji: '🧍', oppositeId: 'utkaaru' },
+  { id: 'thodangu', word: 'தொடங்கு', language: 'ta', transliteration: 'thodangu', meaning: 'start', theme: 'Opposites Two', color: '#6EC67E', emoji: '▶️', oppositeId: 'nil' },
+  { id: 'nil', word: 'நில்', language: 'ta', transliteration: 'nil', meaning: 'stop', theme: 'Opposites Two', color: '#E86A5A', emoji: '✋', oppositeId: 'thodangu' },
+  { id: 'inge', word: 'இங்கே', language: 'ta', transliteration: 'inge', meaning: 'here', theme: 'Opposites Two', color: '#E85D8A', emoji: '📍', oppositeId: 'ange' },
+  { id: 'ange', word: 'அங்கே', language: 'ta', transliteration: 'ange', meaning: 'there', theme: 'Opposites Two', color: '#8FA0D9', emoji: '👉', oppositeId: 'inge' },
+  { id: 'munne', word: 'முன்னே', language: 'ta', transliteration: 'munne', meaning: 'front', theme: 'Opposites Two', color: '#5D8AA8', emoji: '➡️', oppositeId: 'pinne' },
+  { id: 'pinne', word: 'பின்னே', language: 'ta', transliteration: 'pinne', meaning: 'back', theme: 'Opposites Two', color: '#A8B4C0', emoji: '⬅️', oppositeId: 'munne' },
+  { id: 'thira', word: 'திற', language: 'ta', transliteration: 'thira', meaning: 'open', theme: 'Opposites Two', color: '#F2D06B', emoji: '📂', oppositeId: 'moodu' },
+  { id: 'moodu', word: 'மூடு', language: 'ta', transliteration: 'moodu', meaning: 'close', theme: 'Opposites Two', color: '#C9A0E0', emoji: '📁', oppositeId: 'thira' },
 ];
 
 const familyItems: LessonItem[] = [
@@ -572,6 +575,11 @@ export default function App() {
   const [promptOrder, setPromptOrder] = useState<LessonItem[]>([]);
   const [answerOrder, setAnswerOrder] = useState<LessonItem[]>([]);
   const [memoryCards, setMemoryCards] = useState<MemoryCard[]>([]);
+  const [oppositeIndex, setOppositeIndex] = useState(0);
+  const [oppositePromptOrder, setOppositePromptOrder] = useState<LessonItem[]>([]);
+  const [oppositeAnswerOrder, setOppositeAnswerOrder] = useState<LessonItem[]>([]);
+  const [oppositeSelectedAnswer, setOppositeSelectedAnswer] = useState<string | null>(null);
+  const [oppositeFeedback, setOppositeFeedback] = useState('Find the opposite.');
 
   const themeItems = itemsForTheme(activeTheme, language);
   const activeThemeMeta = themes.find((theme) => theme.id === activeTheme);
@@ -595,12 +603,21 @@ export default function App() {
   const themePracticeCount = themeItems.filter((item) => progress[item.id] === 'practice').length;
   const currentItem = promptOrder[matchIndex] ?? promptOrder[0] ?? themeItems[0];
   const adultSupport = showPronunciation;
+  const isOppositesTheme = activeTheme === 'opposites' || activeTheme === 'opposites2';
+  const currentOppositeItem = oppositePromptOrder[oppositeIndex] ?? oppositePromptOrder[0] ?? themeItems[0];
+  const currentOppositeAnswer = themeItems.find((item) => item.id === currentOppositeItem.oppositeId);
 
   useEffect(() => {
     if (screen === 'match') {
       speakWord(currentItem.word, currentItem.language);
     }
   }, [screen, matchIndex, isReviewRound]);
+
+  useEffect(() => {
+    if (screen === 'opposite') {
+      speakWord(currentOppositeItem.word, currentOppositeItem.language);
+    }
+  }, [screen, oppositeIndex]);
 
   useEffect(() => {
     if (screen === 'memory') {
@@ -755,6 +772,62 @@ export default function App() {
         return;
       }
       speakWord(currentItem.word, currentItem.language, advanceToNext);
+      setTimeout(advanceToNext, MAX_SPEECH_WAIT_MS);
+    });
+  }
+
+  function startOppositeGame() {
+    setOppositeIndex(0);
+    setOppositeSelectedAnswer(null);
+    setOppositeFeedback('Find the opposite.');
+    const order = shuffleItems(themeItems);
+    setOppositePromptOrder(order);
+    const firstCorrect = themeItems.find((item) => item.id === order[0].oppositeId) ?? order[0];
+    setOppositeAnswerOrder(buildAnswerOptions(firstCorrect, themeItems.filter((item) => item.id !== order[0].id), ANSWER_OPTIONS_CAP));
+    setScreen('opposite');
+  }
+
+  function handleOppositeAnswer(itemId: string) {
+    const correctItem = themeItems.find((item) => item.id === currentOppositeItem.oppositeId);
+    const isCorrect = itemId === correctItem?.id;
+    setOppositeSelectedAnswer(itemId);
+
+    if (!isCorrect) {
+      playFailSound();
+      setOppositeFeedback('Try again.');
+      return;
+    }
+
+    playSuccessSound();
+    setOppositeFeedback(correctItem ? `Nice! The opposite of ${currentOppositeItem.word} is ${correctItem.word}.` : 'Nice!');
+
+    let advanced = false;
+    const advanceToNext = () => {
+      if (advanced) return;
+      advanced = true;
+      setTimeout(() => {
+        if (oppositeIndex < oppositePromptOrder.length - 1) {
+          const nextItem = oppositePromptOrder[oppositeIndex + 1];
+          const nextCorrect = themeItems.find((item) => item.id === nextItem.oppositeId) ?? nextItem;
+          setOppositeIndex((index) => index + 1);
+          setOppositeAnswerOrder(buildAnswerOptions(nextCorrect, themeItems.filter((item) => item.id !== nextItem.id), ANSWER_OPTIONS_CAP));
+          setOppositeSelectedAnswer(null);
+          setOppositeFeedback('Find the opposite.');
+          return;
+        }
+        setOppositeSelectedAnswer(null);
+        setScreen('themes');
+      }, REACTION_PAUSE_MS);
+    };
+
+    // Same interruption-avoidance as Match-and-Listen's confirmation replay:
+    // only re-speak if nothing is already playing, otherwise just advance.
+    Speech.isSpeakingAsync().then((isSpeaking) => {
+      if (isSpeaking || !correctItem) {
+        advanceToNext();
+        return;
+      }
+      speakWord(correctItem.word, correctItem.language, advanceToNext);
       setTimeout(advanceToNext, MAX_SPEECH_WAIT_MS);
     });
   }
@@ -1063,6 +1136,49 @@ export default function App() {
           </ScreenShell>
         )}
 
+        {screen === 'opposite' && (
+          <ScreenShell>
+            <View style={styles.gameHeader}>
+              <Text style={styles.progressText}>{oppositeIndex + 1}/{oppositePromptOrder.length}</Text>
+              <Text style={styles.kicker}>Find the Opposite</Text>
+            </View>
+            <Pressable
+              style={styles.soundCard}
+              onPress={() => speakWord(currentOppositeItem.word, currentOppositeItem.language)}
+              accessibilityRole="button"
+              accessibilityLabel="Replay the word"
+            >
+              <CharacterMascot character={character} mood="speak" language={language} compact />
+              <View style={styles.soundCopy}>
+                <Text style={styles.instruction}>Tap the opposite word.</Text>
+                <Text style={styles.promptWord}>{currentOppositeItem.word}</Text>
+                {adultSupport ? <Text style={styles.promptHelp}>{currentOppositeItem.transliteration}</Text> : null}
+                <Text style={styles.replayHint}>Tap to hear again</Text>
+              </View>
+            </Pressable>
+            <Text style={styles.feedbackText}>{oppositeFeedback}</Text>
+            <View style={styles.answerGrid}>
+              {oppositeAnswerOrder.map((item) => {
+                const isSelected = oppositeSelectedAnswer === item.id;
+                const isCorrect = isSelected && item.id === currentOppositeAnswer?.id;
+                const isWrong = isSelected && item.id !== currentOppositeAnswer?.id;
+                return (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => handleOppositeAnswer(item.id)}
+                    style={[styles.answerTile, isCorrect && styles.answerCorrect, isWrong && styles.answerWrong]}
+                    accessibilityRole="button"
+                  >
+                    <FoodVisual item={item} />
+                    <Text style={styles.answerHindi}>{item.word}</Text>
+                    <Text style={styles.answerMeaning}>{item.meaning}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </ScreenShell>
+        )}
+
         {screen === 'memory' && (
           <ScreenShell>
             <Text style={styles.kicker}>Memory Pairs</Text>
@@ -1113,7 +1229,11 @@ export default function App() {
               ) : null}
             </View>
             <PrimaryButton label="Play next" onPress={() => setScreen('themes')} />
-            <SecondaryButton label="Play Memory Pairs (optional)" onPress={startMemoryPairs} />
+            {isOppositesTheme ? (
+              <SecondaryButton label="Find the Opposite (optional)" onPress={startOppositeGame} />
+            ) : (
+              <SecondaryButton label="Play Memory Pairs (optional)" onPress={startMemoryPairs} />
+            )}
             <SecondaryButton label="See progress" onPress={() => setScreen('progress')} />
           </ScreenShell>
         )}
