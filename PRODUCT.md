@@ -6,13 +6,13 @@ product
 
 ## Users
 
-Hindi Quest serves young kids and toddlers first and foremost, alongside a parent or family member learning together. Users are usually in a short practice moment at home, on a couch, at a table, or during a family learning break. The core job is to hear the word spoken clearly and slowly, recognize the correct picture or meaning, and feel rewarded enough to play one more short session. Because the primary audience is toddlers, visuals must read as simple, bright, and unambiguous at a glance — see `DESIGN.md` for the concrete rule this produced (real photos rejected in favor of flat icon illustrations).
+Hindi Quest is built first for a **toddler, roughly 2-3 years old, with a parent driving the screen alongside them** — not a kid navigating independently. That distinction shapes real design decisions: instructional text can stay in full English prose (the parent reads it, not the child), but anything the *child* is meant to parse — game state, correctness, how many choices are on screen at once — has to work through position, color, size, and sound, not reading. Users are usually in a short practice moment at home, on a couch, at a table, or during a family learning break. The core job is to hear the word spoken clearly and slowly, recognize the correct picture or meaning, and feel rewarded enough to play one more short session. Because the primary audience is a toddler, visuals must read as simple, bright, and unambiguous at a glance — see `DESIGN.md` for the concrete rule this produced (real photos rejected in favor of flat icon illustrations).
 
 Hindi Quest teaches both **Hindi and Tamil** — the two are fully independent tracks (separate content, separate progress, separate unlock state) selected once via a language picker, not a "kid vs adult" mode.
 
 ## Product Purpose
 
-Hindi Quest helps beginners learn Hindi or Tamil through quick audio-first games. The core loop — hear the word, tap the right tile, complete a tiny mission, and unlock progress — should be understandable and enjoyable for a toddler with a parent alongside them. Success means a first-time user can complete a Food lesson in under five minutes and voluntarily continue or replay.
+Hindi Quest helps beginners learn Hindi or Tamil through quick audio-first games — vocabulary (food, colors, family, animals, and more) as well as relational concepts like opposites. The core loop — hear the word, tap the right tile, complete a tiny mission, and unlock progress — should be understandable and enjoyable for a toddler with a parent alongside them. Every lesson is Match-and-Listen (hear it, tap it); most themes then offer an optional second activity — Memory Pairs for most, or Find the Opposite for the two Opposites themes, where the correct tile is the *opposite* word rather than the same one. The second activity is optional by design: a full lesson is Match-and-Listen alone, kept short enough for a 2-3-year-old's attention span, with the second activity there for whoever wants more. Success means a first-time user can complete a Food lesson in under five minutes and voluntarily continue or replay.
 
 ## Brand Personality
 

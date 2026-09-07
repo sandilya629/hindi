@@ -29,7 +29,10 @@ A theme unlocks once every item in the previous theme is marked "known"
 **Tamil caveat:** the Tamil word list is sourced from common vocabulary but
 has **not been checked by a native speaker**. Every Tamil content array has a
 `NOTE:` comment flagging this. Verify before wider real-family use — this is
-the single biggest outstanding item.
+the single biggest outstanding item. `hindi-words-for-review.csv` and
+`tamil-words-for-review.csv` (repo root) list every word by theme with a
+blank column for corrections, meant to be handed to a native speaker
+without them needing to touch the code — see `ROADMAP.md`.
 
 ## Architecture
 
@@ -37,9 +40,12 @@ the single biggest outstanding item.
   Expo web export deployed to Vercel. Progress persists client-side only via
   AsyncStorage, no accounts/login.
 - Content model: `LessonItem { id, word, language, transliteration, meaning,
-  theme, color, emoji }`. Each theme has one array per language (e.g.
-  `foodItems` / `tamilFoodItems`). `itemsForTheme(themeId, language)` is the
-  single dispatch point — add a new theme/language combo there.
+  theme, color, emoji, oppositeId? }`. `oppositeId` is only set on
+  Opposites/Opposites Two items and points at the paired item's id — powers
+  the "Find the Opposite" game (see Gameplay flow below). Each theme has one
+  array per language (e.g. `foodItems` / `tamilFoodItems`).
+  `itemsForTheme(themeId, language)` is the single dispatch point — add a
+  new theme/language combo there.
 - Ids are unique across *all* items in *both* languages (they share one
   `Progress` map in AsyncStorage). Where a Hindi and Tamil word happen to
   transliterate to the same string (e.g. both use "car" or "pencil" as a
@@ -84,6 +90,18 @@ the single biggest outstanding item.
   large with the selected mascot marked "is here"; locked stops are muted
   with a lock glyph. Reuses `themePlayability`/`isThemeMastered` — no new
   state.
+- **"Find the Opposite" replaces Memory Pairs for the two Opposites
+  themes.** Kid feedback: a hidden-card matching game didn't fit
+  Opposites/Opposites Two as well as a direct "find the opposite word"
+  mechanic would. Each item in those two themes (both languages) now has
+  an `oppositeId` field pointing at its pair. The new `'opposite'` screen
+  reuses the Match-and-Listen pattern exactly (hear/see a word, tap the
+  right tile from a capped 6-tile set via `buildAnswerOptions`) but the
+  correct answer is `currentOppositeItem.oppositeId`, not the same item —
+  no new mastery/progress tracking, purely a bonus round like Memory Pairs
+  was. The Reward screen's optional-activity button is theme-aware:
+  `isOppositesTheme` picks "Find the Opposite (optional)" for Opposites/
+  Opposites Two and "Play Memory Pairs (optional)" for every other theme.
 
 ## Visual design (recent change)
 
@@ -169,6 +187,10 @@ playing. Verified in the browser by forcing `speechSynthesis.speaking` to
   target server.
 
 ## Discussed but not built (raised in planning conversations, no code yet)
+
+See `ROADMAP.md` for the product-facing version of this list (including
+launch/wider-audience thinking) — this section stays focused on the
+technical implementation angle.
 
 - **Sub-levels within a theme.** Four themes now sit at 10+ items (Opposites
   10, Opposites Two 12, Starter sounds 10, Numbers 10) — the Match-and-Listen
