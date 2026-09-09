@@ -145,17 +145,53 @@ clipped — don't re-raise these without a specific reason):
   real utterance takes to play, or the app will advance while audio is still
   playing.
 
-**Lesson learned, don't reintroduce this bug:** `speakWord` always calls
-`Speech.stop()` before speaking, which is correct for an explicit "tap to
-hear again" replay but was also firing from `handleAnswer`'s correct-answer
-confirmation replay — so a quick correct tap, landing before the question's
-initial auto-play finished, would cut the word off mid-syllable (reported as
-"doodh" clipping to "doo") and restart it. Fixed by checking
+**Lesson learned, don't reintroduce this bug — this note originally
+claimed the bug below was fixed; it wasn't, only half of it was.**
+`speakWord` always calls `Speech.stop()` before speaking, which is correct
+for an explicit "tap to hear again" replay. The first fix (still true)
+was that this was also firing from `handleAnswer`'s correct-answer
+confirmation replay — a quick correct tap, landing before the question's
+initial auto-play finished, would cut the word off mid-syllable (reported
+as "doodh" clipping to "doo"). That was fixed by checking
 `Speech.isSpeakingAsync()` first: if the initial auto-play is still going,
-skip the confirmation speak entirely and just let it finish undisturbed
-before advancing; only replay-as-confirmation when nothing is already
-playing. Verified in the browser by forcing `speechSynthesis.speaking` to
-`true` and confirming no interrupting `cancel()`/`speak()` pair fires.
+skip the confirmation speak and let it finish undisturbed.
+
+**What that fix missed:** skipping the confirmation speak isn't enough on
+its own — the code still called `advanceToNext()` immediately, which
+waits a *fixed* `REACTION_PAUSE_MS` (1800ms) and then moves to the next
+question, whose own auto-play effect calls `speakWord` → `Speech.stop()`.
+If the still-playing word takes longer than 1800ms to finish — very
+possible for a multi-syllable word at this app's deliberately slow rate,
+and *more* likely every time the rate was tuned down further, since a
+slower word takes longer to finish — the next question's auto-play would
+cancel it mid-syllable, reproducing the exact same "doodh → doo" symptom
+via a different path than the one originally fixed. This is almost
+certainly why the bug kept resurfacing across multiple "slow it down"
+tuning passes: each pass made the race *more* likely to reproduce, not
+less, since it only ever addressed the utterance's rate, not how long the
+app then waited before assuming it was safe to speak the next one.
+
+**Actually fixed now:** `waitForSpeechIdle(maxWaitMs)` polls
+`Speech.isSpeakingAsync()` every 120ms until it reports false (bounded by
+`MAX_SPEECH_WAIT_MS` as a safety net), instead of guessing a fixed delay.
+`handleAnswer` and `handleOppositeAnswer` both call it before advancing
+when the check finds speech still in progress, so the next question's
+`speakWord` can never fire while the current word is still playing,
+regardless of word length or device speech-engine speed. No rate constant
+needed to change — the race was never really about how fast/slow the
+words *sound*, only about how long the app waited before assuming it was
+safe to interrupt them.
+
+**Verified with a reproduction, not just a read of the code:** extended
+this file's own documented TTS-mocking method (`speechSynthesis.speak`
+monkey-patched to simulate a word that takes 2500ms to finish, longer than
+`REACTION_PAUSE_MS`) into a scripted browser test run against real
+`npx expo export --platform web` builds of both the pre-fix and post-fix
+code. Pre-fix: reproduced the exact bug — "दूध" (doodh) starts speaking,
+gets `cancel()`led at ~2000ms (before its own 2500ms finish), "रोटी"
+starts immediately after. Post-fix, identical scenario: the word plays
+all the way to its own natural `end` event at 2501ms, with no
+interrupting cancel. `npx tsc --noEmit` clean.
 
 ## Palette audit (checked, no change made)
 

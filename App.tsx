@@ -72,6 +72,32 @@ function speakUIPrompt(text: string) {
   Speech.speak(text, { language: 'en-US', rate: SPEECH_RATE });
 }
 
+// Polls Speech.isSpeakingAsync() until it goes false (or maxWaitMs elapses,
+// as a safety net if speech somehow never reports finished) instead of
+// guessing a fixed delay. This exists specifically because a fixed delay
+// was the actual cause of the "doodh" -> "doo" clipping bug: handleAnswer/
+// handleOppositeAnswer's correct-answer path checks isSpeakingAsync once,
+// and — when the child taps correctly early enough that the question's
+// auto-play is still going — used to just wait a flat REACTION_PAUSE_MS
+// (1800ms) and hope the word had finished by then. A slower rate makes a
+// word take *longer* to say, so each previous "slow the speech down more"
+// fix (see the constants above) made a still-in-flight word more likely
+// to still be speaking when that flat window ended, not less — the
+// interruption bug this file already documents as fixed was only fixed
+// for the *confirmation replay itself*, not for the very next question's
+// auto-play, which also calls speakWord -> Speech.stop() and cuts off
+// whatever the previous question was still saying. Waiting for actual
+// idle instead of a guessed duration removes the race entirely, for any
+// word length or device speech-engine speed.
+async function waitForSpeechIdle(maxWaitMs: number) {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    const stillSpeaking = await Speech.isSpeakingAsync();
+    if (!stillSpeaking) return;
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+}
+
 function shuffleItems<T>(items: T[]): T[] {
   const copy = [...items];
   for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -815,10 +841,17 @@ export default function App() {
     // question's initial auto-play is still going — a quick correct tap can
     // easily land before it finishes — don't call speakWord again: it stops
     // whatever is currently playing first, which was cutting the word off
-    // mid-syllable. Just let the in-flight audio finish undisturbed.
+    // mid-syllable ("doodh" -> "doo"). Wait for it to actually finish
+    // (waitForSpeechIdle polls real playback state) before advancing,
+    // rather than guessing a fixed delay was long enough — a flat guess
+    // was the actual bug: advanceToNext's own pause is a fixed
+    // REACTION_PAUSE_MS, and a slow, deliberately-stretched-out word can
+    // still be mid-syllable when that fixed window ends, at which point
+    // the *next* question's auto-play would call Speech.stop() and cut it
+    // off. Waiting for idle first removes the guess entirely.
     Speech.isSpeakingAsync().then((isSpeaking) => {
       if (isSpeaking) {
-        advanceToNext();
+        waitForSpeechIdle(MAX_SPEECH_WAIT_MS).then(advanceToNext);
         return;
       }
       speakWord(currentItem.word, currentItem.language, advanceToNext);
@@ -870,11 +903,16 @@ export default function App() {
       }, REACTION_PAUSE_MS);
     };
 
-    // Same interruption-avoidance as Match-and-Listen's confirmation replay:
-    // only re-speak if nothing is already playing, otherwise just advance.
+    // Same interruption-avoidance as Match-and-Listen's confirmation replay
+    // (see the comment there for why this waits for actual idle rather
+    // than a fixed delay): only re-speak if nothing is already playing.
     Speech.isSpeakingAsync().then((isSpeaking) => {
-      if (isSpeaking || !correctItem) {
+      if (!correctItem) {
         advanceToNext();
+        return;
+      }
+      if (isSpeaking) {
+        waitForSpeechIdle(MAX_SPEECH_WAIT_MS).then(advanceToNext);
         return;
       }
       speakWord(correctItem.word, correctItem.language, advanceToNext);
