@@ -4,6 +4,23 @@ What's next for Hindi Quest, roughly in order of how soon it's likely to
 happen. See [`STATUS.md`](STATUS.md) for the technical detail behind any
 of these — this file is the "what and why," not the "how."
 
+An external AI brainstorming document ("Optimizing Hindi Quest Edtech
+App") proposed a much larger reimagining of the product at one point — a
+rebrand, a dual-track (ages 3–5 vs. 6+) architecture, multi-child
+profiles, a parent gate, microphone-based speech-echo games,
+subscriptions, and native app store packaging on a different tech stack
+(Vite + Capacitor instead of Expo). That fuller reimagining was reviewed
+and explicitly not adopted: it's a speculative brand/business roadmap
+generated without visibility into this repo, it assumes a tech stack that
+duplicates what Expo already gives us (EAS Build already reaches both app
+stores; no Capacitor needed), and it skips past the validation step this
+roadmap already calls for below ("stay web-only, share the link wider"
+before investing in anything bigger). It also proposed three different
+brand names in one sitting with no trademark/domain check — not something
+to act on mid-build. What did survive that review is folded into "Next
+up" below; the rest is recorded under "Deferred pending real signal" so
+the reasoning isn't lost if it comes up again.
+
 ## In progress
 
 - **Tamil native-speaker verification.** The single biggest open item.
@@ -25,6 +42,38 @@ of these — this file is the "what and why," not the "how."
   came directly from a kid who played the game asking for them, not from
   a planning session, so the plan is to keep staying open to that channel
   rather than pre-deciding a fixed content roadmap.
+- **Toddler-friendly UX polish**, cherry-picked from the BoloBee/rebrand
+  analysis above as low-risk, no-architecture-change ideas — additive to
+  `App.tsx` as it exists today, meant to be tried and evaluated against
+  real usage before going further, not committed to as a package:
+  - **Tablet touch-safety lock.** Disable pinch-zoom, pull-to-refresh, and
+    text-selection callouts (`touch-action: none` at the root) and lock
+    orientation to landscape. Toddlers rest palms on screens and
+    pinch/scroll by accident — pure friction removal, a few lines in the
+    root layout/viewport config.
+  - **Warmer palette pass.** The analysis (working only from a live
+    screenshot, not `DESIGN.md`) flagged the current theme as reading
+    "monotone brown/navy" and suggested warmer saffron/mango/sky-blue/mint
+    tones instead. Worth a sanity check against the actual design
+    rationale in `DESIGN.md` before changing anything — if the critique
+    holds up, it's a token/color-value change, not a structural one.
+  - **Less English text in onboarding/UI chrome.** Where a toggle or label
+    currently requires English reading literacy (e.g. language/
+    pronunciation toggles), lean further on icons, color, and voice
+    prompts so a non-reading 3-5 year old can navigate unassisted.
+    Complements work already done on audio pacing (see `SPEECH_RATE`
+    history in `STATUS.md`).
+  - **Non-punitive wrong-answer feedback, audited.** Confirm the current
+    wrong-answer state (visual/audio) reads as gentle redirection rather
+    than a buzzer/failure state, in the same spirit as the existing "Find
+    the Opposite" and Match-and-Listen flows. Likely already mostly true
+    given the audio-clipping fixes already made — a verification pass,
+    not necessarily new code.
+
+  Sequencing: these sit behind Tamil verification in priority, and are
+  meant to be tried in the existing web build with a few families before
+  any larger direction (new interaction templates, dual-track, rebrand)
+  is considered.
 
 ## Launch / wider audience
 
@@ -50,7 +99,9 @@ evaluated but not chosen:
   app is already compliant in spirit with zero data collection, but this
   has to be demonstrated in the listing, not just true in the code. Worth
   doing once there's a specific reason to want app-store discovery, not
-  as a default next step.
+  as a default next step. Note: Expo's own EAS Build path reaches both
+  app stores from the current codebase — no platform migration needed to
+  get here.
 
 ## Longer-term / not scoped yet
 
@@ -65,3 +116,20 @@ evaluated but not chosen:
   scale past people you know — no plan yet for what replaces it (an email
   link is the simplest option, doesn't require the analytics/tracking
   this app has deliberately avoided).
+
+## Deferred pending real signal (from the BoloBee analysis, not adopted)
+
+Recorded here for reference so the reasoning isn't lost, not as committed
+work:
+
+- Rebrand (name/mascot restructuring), multi-child profiles with avatar
+  builder, parent gate (math-wall), screen-time controls, microphone-based
+  "repeat after me" echo games, freemium subscriptions, 5-language
+  expansion, and a full dual-track (3-5 vs. 6+) game-engine split.
+- All of these are legitimate ideas for a later, larger commercial push —
+  but they assume install/retention numbers this project doesn't have yet,
+  and several (rebrand, subscriptions, native packaging) are expensive to
+  reverse. Revisit only after the "share wider" test above shows real
+  demand, and re-evaluate the tech stack question fresh at that point
+  rather than assuming Vite/Capacitor — Expo already covers most of what
+  that stack was proposed to solve.
