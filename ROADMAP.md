@@ -56,12 +56,25 @@ the reasoning isn't lost if it comes up again.
     lock, also proposed in the source analysis, was deliberately **not**
     done — it would reverse `DESIGN.md`'s explicit "portrait mobile first"
     call, so it's a separate decision, not a touch-safety fix.
-  - **Warmer palette pass.** The analysis (working only from a live
-    screenshot, not `DESIGN.md`) flagged the current theme as reading
-    "monotone brown/navy" and suggested warmer saffron/mango/sky-blue/mint
-    tones instead. Worth a sanity check against the actual design
-    rationale in `DESIGN.md` before changing anything — if the critique
-    holds up, it's a token/color-value change, not a structural one.
+  - **Warmer palette pass — checked, no repaint warranted.** Measured the
+    actual colors (converted `DESIGN.md`'s OKLCH tokens to sRGB, extracted
+    the real hex values from `App.tsx`'s `StyleSheet`, compared both
+    numerically and as rendered swatches — see `STATUS.md`) rather than
+    trusting the "monotone brown/navy" read off a live screenshot. Verdict:
+    the primary button's gold sits squarely between the two documented
+    gold tokens (comparable or higher chroma, not desaturated/muddy), and
+    the warm cream backgrounds match `color-surface` almost exactly — this
+    is the deliberately restrained, non-neon, non-babyish palette
+    `PRODUCT.md`/`DESIGN.md` chose on purpose (their own anti-references
+    rule out "harsh neon colors" and "overly childish baby-toy styling").
+    Repainting to the suggested saffron/mango/mint would undo a documented
+    brand decision, not fix a defect — not done. The one real (small, non-
+    urgent) gap found: a dark-navy fill close to the `ink` text token is
+    used as a *background* on three elements (active segment toggle, level
+    badge, memory-card back) without ever being written down as a
+    component pattern — now documented in `DESIGN.md` under Components so
+    it stays a deliberate, single accent rather than drifting further.
+    No color values changed.
   - **Less English text in onboarding/UI chrome.** Where a toggle or label
     currently requires English reading literacy (e.g. language/
     pronunciation toggles), lean further on icons, color, and voice

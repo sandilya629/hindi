@@ -157,6 +157,43 @@ before advancing; only replay-as-confirmation when nothing is already
 playing. Verified in the browser by forcing `speechSynthesis.speaking` to
 `true` and confirming no interrupting `cancel()`/`speak()` pair fires.
 
+## Palette audit (checked, no change made)
+
+The roadmap's "warmer palette pass" item started from the outside
+analysis's claim that the live site reads as a "monotone brown/navy
+theme." Checked by measurement rather than by re-looking at a screenshot:
+converted `DESIGN.md`'s OKLCH tokens to sRGB (Python, standard OKLab
+matrices — no network/library needed), pulled the actual hex values out of
+`App.tsx`'s `StyleSheet`, converted those back to OKLCH for a fair
+lightness/chroma/hue comparison, and rendered both sets as swatches to
+look at directly rather than trust the numbers alone:
+
+- `primaryButton` fill `#B9780D` → OKLCH L=0.626 C=0.132 H=70.9° — sits
+  almost exactly between the documented `color-primary` (L=0.720 C=0.149
+  H=79.9°) and `color-primary-strong` (L=0.562 C=0.120 H=73.0°) tokens,
+  with chroma at or above both. Not desaturated/muddy relative to the
+  design system's own tokens — it's a legitimate mid-tone honey-gold.
+- Header/hero background wash `#F7F1DF` is essentially identical to the
+  documented `color-surface` (`#F9F6ED`) — a warm cream, not brown.
+- The one real finding: `#24324C`, used as a text-ink color throughout (as
+  intended — it's close to the documented `color-ink` token, just
+  lightened for legibility), is *also* used as a solid background fill on
+  three chrome elements: the active language/track segment toggle, the
+  level badge, and the face-down Memory Pairs card. That pattern existed
+  in three places independently but was never written down — now added to
+  `DESIGN.md`'s Components list as a named "dark accent fill," so it stays
+  one deliberate accent rather than draws in a fourth ad hoc color over
+  time. This is a documentation fix, not a color change.
+
+**Conclusion: the palette is not objectively drab.** It's the
+deliberately restrained, non-neon palette `PRODUCT.md`/`DESIGN.md` chose on
+purpose — their own anti-references explicitly rule out "harsh neon
+colors" and "overly childish baby-toy styling." The outside analysis's
+suggested repaint (saffron/mango/sky-blue/mint) would reverse a documented
+brand decision, not fix a defect it never actually measured — it was
+written off a live screenshot, without access to the design rationale.
+No `App.tsx` colors were changed.
+
 ## Web touch-safety (toddler UX polish, in progress)
 
 `public/index.html` overrides Expo's default web export template (Expo
