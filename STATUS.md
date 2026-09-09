@@ -145,17 +145,352 @@ clipped — don't re-raise these without a specific reason):
   real utterance takes to play, or the app will advance while audio is still
   playing.
 
-**Lesson learned, don't reintroduce this bug:** `speakWord` always calls
-`Speech.stop()` before speaking, which is correct for an explicit "tap to
-hear again" replay but was also firing from `handleAnswer`'s correct-answer
-confirmation replay — so a quick correct tap, landing before the question's
-initial auto-play finished, would cut the word off mid-syllable (reported as
-"doodh" clipping to "doo") and restart it. Fixed by checking
+**Lesson learned, don't reintroduce this bug — this note originally
+claimed the bug below was fixed; it wasn't, only half of it was.**
+`speakWord` always calls `Speech.stop()` before speaking, which is correct
+for an explicit "tap to hear again" replay. The first fix (still true)
+was that this was also firing from `handleAnswer`'s correct-answer
+confirmation replay — a quick correct tap, landing before the question's
+initial auto-play finished, would cut the word off mid-syllable (reported
+as "doodh" clipping to "doo"). That was fixed by checking
 `Speech.isSpeakingAsync()` first: if the initial auto-play is still going,
-skip the confirmation speak entirely and just let it finish undisturbed
-before advancing; only replay-as-confirmation when nothing is already
-playing. Verified in the browser by forcing `speechSynthesis.speaking` to
-`true` and confirming no interrupting `cancel()`/`speak()` pair fires.
+skip the confirmation speak and let it finish undisturbed.
+
+**What that fix missed:** skipping the confirmation speak isn't enough on
+its own — the code still called `advanceToNext()` immediately, which
+waits a *fixed* `REACTION_PAUSE_MS` (1800ms) and then moves to the next
+question, whose own auto-play effect calls `speakWord` → `Speech.stop()`.
+If the still-playing word takes longer than 1800ms to finish — very
+possible for a multi-syllable word at this app's deliberately slow rate,
+and *more* likely every time the rate was tuned down further, since a
+slower word takes longer to finish — the next question's auto-play would
+cancel it mid-syllable, reproducing the exact same "doodh → doo" symptom
+via a different path than the one originally fixed. This is almost
+certainly why the bug kept resurfacing across multiple "slow it down"
+tuning passes: each pass made the race *more* likely to reproduce, not
+less, since it only ever addressed the utterance's rate, not how long the
+app then waited before assuming it was safe to speak the next one.
+
+**Actually fixed now:** `waitForSpeechIdle(maxWaitMs)` polls
+`Speech.isSpeakingAsync()` every 120ms until it reports false (bounded by
+`MAX_SPEECH_WAIT_MS` as a safety net), instead of guessing a fixed delay.
+`handleAnswer` and `handleOppositeAnswer` both call it before advancing
+when the check finds speech still in progress, so the next question's
+`speakWord` can never fire while the current word is still playing,
+regardless of word length or device speech-engine speed. No rate constant
+needed to change — the race was never really about how fast/slow the
+words *sound*, only about how long the app waited before assuming it was
+safe to interrupt them.
+
+**Verified with a reproduction, not just a read of the code:** extended
+this file's own documented TTS-mocking method (`speechSynthesis.speak`
+monkey-patched to simulate a word that takes 2500ms to finish, longer than
+`REACTION_PAUSE_MS`) into a scripted browser test run against real
+`npx expo export --platform web` builds of both the pre-fix and post-fix
+code. Pre-fix: reproduced the exact bug — "दूध" (doodh) starts speaking,
+gets `cancel()`led at ~2000ms (before its own 2500ms finish), "रोटी"
+starts immediately after. Post-fix, identical scenario: the word plays
+all the way to its own natural `end` event at 2501ms, with no
+interrupting cancel. `npx tsc --noEmit` clean.
+
+**Also verified on Starter Sounds and Find the Opposite specifically**
+(not just Food/Match-and-Listen), since both go through code that either
+looked identical or turned out to be a second, distinct call site:
+- **Starter Sounds** (single-letter items, `SOUND_SPEECH_RATE`) — same
+  `handleAnswer` function, so this was mostly confirming the fix is
+  content-agnostic rather than expecting a different result: seeded
+  `localStorage`'s `hindi-quest-progress` with Food/Colors/Opposites/
+  Opposites Two/Family all `'known'` (per this file's own testing
+  methodology below) to land directly on Starter Sounds without playing
+  four unrelated themes first, then ran the same fast-tap-during-auto-play
+  scenario. A single mocked letter ("र", "अ", "ल" across runs) played to
+  its natural `end` every time, no premature cancel.
+- **Find the Opposite** (`handleOppositeAnswer`) — a genuinely separate
+  function with its own copy of the same fix, so this needed its own
+  check, not an inference from the Match-and-Listen result. Seeded
+  Food/Colors as `'known'` to land on Opposites, played through its
+  Match-and-Listen round (confirming `handleAnswer` again, this time with
+  Opposites' own content — "दिन" completed naturally too), reached Reward,
+  opened "Find the Opposite (optional)," then fast-tapped a correct
+  opposite ("नीचे" → "ऊपर") during its own mocked auto-play. The captured
+  log ended up spanning several consecutive question transitions (into a
+  second Find-the-Opposite round) rather than just the one tap checked —
+  every single word's `speak` → `end` pair completed naturally before the
+  next word's `speak` ever fired, across the whole stretch.
+
+## Palette audit (checked, no change made)
+
+The roadmap's "warmer palette pass" item started from the outside
+analysis's claim that the live site reads as a "monotone brown/navy
+theme." Checked by measurement rather than by re-looking at a screenshot:
+converted `DESIGN.md`'s OKLCH tokens to sRGB (Python, standard OKLab
+matrices — no network/library needed), pulled the actual hex values out of
+`App.tsx`'s `StyleSheet`, converted those back to OKLCH for a fair
+lightness/chroma/hue comparison, and rendered both sets as swatches to
+look at directly rather than trust the numbers alone:
+
+- `primaryButton` fill `#B9780D` → OKLCH L=0.626 C=0.132 H=70.9° — sits
+  almost exactly between the documented `color-primary` (L=0.720 C=0.149
+  H=79.9°) and `color-primary-strong` (L=0.562 C=0.120 H=73.0°) tokens,
+  with chroma at or above both. Not desaturated/muddy relative to the
+  design system's own tokens — it's a legitimate mid-tone honey-gold.
+- Header/hero background wash `#F7F1DF` is essentially identical to the
+  documented `color-surface` (`#F9F6ED`) — a warm cream, not brown.
+- The one real finding: `#24324C`, used as a text-ink color throughout (as
+  intended — it's close to the documented `color-ink` token, just
+  lightened for legibility), is *also* used as a solid background fill on
+  three chrome elements: the active language/track segment toggle, the
+  level badge, and the face-down Memory Pairs card. That pattern existed
+  in three places independently but was never written down — now added to
+  `DESIGN.md`'s Components list as a named "dark accent fill," so it stays
+  one deliberate accent rather than draws in a fourth ad hoc color over
+  time. This is a documentation fix, not a color change.
+
+**Conclusion: the palette is not objectively drab.** It's the
+deliberately restrained, non-neon palette `PRODUCT.md`/`DESIGN.md` chose on
+purpose — their own anti-references explicitly rule out "harsh neon
+colors" and "overly childish baby-toy styling." The outside analysis's
+suggested repaint (saffron/mango/sky-blue/mint) would reverse a documented
+brand decision, not fix a defect it never actually measured — it was
+written off a live screenshot, without access to the design rationale.
+No `App.tsx` colors were changed.
+
+## "Less English text" audit (checked, mostly no change; one gap found)
+
+The roadmap item's framing — "lean further on icons, color, and voice
+prompts so a non-reading 3-5 year old can navigate unassisted" — assumes
+a fully independent, non-reading child navigating the whole app alone.
+Checked against `PRODUCT.md` before touching anything, because that's not
+this app's model: **"Hindi Quest is built first for a toddler... with a
+parent driving the screen alongside them — not a kid navigating
+independently. That distinction shapes real design decisions:
+instructional text can stay in full English prose (the parent reads it,
+not the child), but anything the child is meant to parse — game state,
+correctness, how many choices are on screen at once — has to work through
+position, color, size, and sound, not reading."**
+
+Checked each named example and the actual bar `PRODUCT.md` sets, against
+the real screens in `App.tsx`:
+
+- **"Choose your language," "Show pronunciation help"** — both live on the
+  setup screen, operated once by the parent before the child ever touches
+  the tablet (`languageMeta`/`adultSupport` toggles). This is precisely the
+  "parent reads it, not the child" case `PRODUCT.md` describes on purpose
+  — Design Principle 4 even names pronunciation help as adult-only support,
+  "not a separate mode." Changing this would work against a documented
+  decision, not fix a violation of it. Not done.
+- **In-lesson mechanics** (the part `PRODUCT.md` actually requires to be
+  non-text) — already audio-led and icon/color-driven: the prompt word is
+  spoken (`speakWord`), answer tiles are icon/emoji-first, and correctness
+  is shown via tile state, not a text verdict the child must read. The
+  Themes screen already replaced "Master X to unlock" prose with a
+  position/size/icon-only path for exactly this reason (see the Gameplay
+  flow section above) — this principle is already applied where it
+  actually matters.
+- **The one real gap:** post-lesson navigation — `Continue`, `Play next`,
+  `See progress`, and the optional `Find the Opposite (optional)`/`Play
+  Memory Pairs (optional)` buttons — is where the child *is* likely to tap
+  directly during a shared session (this is squarely "how many choices are
+  on screen... which one to tap next," `PRODUCT.md`'s own bar). Right now
+  these are plain English button labels; the only non-text cue is size and
+  Primary-vs-Secondary color, with no icon and no spoken cue, unlike every
+  in-lesson screen. Worth closing, but it's a real design decision (which
+  icon fits each button, whether the mascot should voice the label) rather
+  than a mechanical fix — not guessed at here; needs a call before doing.
+
+**Follow-up: designed and built.** `PrimaryButton`/`SecondaryButton` now
+take an optional `icon` prop (a small emoji glyph rendered before the
+label; the components' Pressable carries an explicit `accessibilityLabel`
+set to the plain label text, so the decorative icon isn't separately
+announced by a screen reader — RN treats an accessible element with an
+explicit label as one node, subsuming its children). The top-bar Home/
+Progress links (plain `Pressable`s, not the shared button components) got
+the same treatment inline. One consistent icon language across every
+post-setup screen — repeating an icon for the same destination/action
+everywhere it appears, like real wayfinding signage, rather than a
+different icon per screen for the same action:
+
+- 🏠 Home, ⭐ Progress — top bar, every screen
+- 🗺️ any button that goes to the themes map (`Choose a theme`,
+  `Back to themes`)
+- ▶️ any button that starts/continues/replays a lesson (`Continue`/
+  `Start first lesson`, `Play`, `Play next`, `Review <Theme>`)
+- 🧠 `Play Memory Pairs (optional)`, ↔️ `Find the Opposite (optional)`
+- **Deliberately no icon:** `Reset prototype` on the Progress screen. It
+  wipes all progress — it should look less inviting to tap than the rest,
+  not more, so it was left out of the icon system on purpose rather than
+  overlooked.
+
+## "Erase all progress" gating (fixed)
+
+Follow-up to the icon-design flag above. `resetPrototype()` was a single,
+ungated tap with zero confirmation — `setProgress(initialProgress)` wipes
+the shared progress map for *both* Hindi and Tamil (see the Architecture
+section's note that both languages share one `Progress` map in
+AsyncStorage), with no undo and no cloud backup (client-side storage only,
+per the Deployment/Architecture sections). Progress is one of only two
+links every screen's top bar exposes, so a child exploring the app could
+reach it and permanently erase everything with one accidental tap. This
+was a real safety gap, not a style question, so it got fixed rather than
+just flagged further:
+
+- Relabeled the trigger from `Reset prototype` (dev jargon, doesn't say
+  what it does) to `Erase all progress`.
+- Tapping it no longer calls `resetPrototype()` directly — it sets a new
+  `confirmingReset` state, which swaps the button for a warning panel:
+  "Erase all progress for both Hindi and Tamil? This can't be undone,"
+  a `Cancel` button (returns to the plain trigger, touches nothing), and a
+  second, explicitly-worded `Yes, erase everything` button that's the only
+  one that actually calls `resetPrototype()`.
+- That confirm button uses a new `destructiveButton` style filled with
+  `#D5565D` — the exact sRGB conversion of `DESIGN.md`'s already-documented
+  `--color-berry` token (`oklch(0.620 0.160 20)`), computed the same way as
+  the palette audit above. That token existed in the design system but was
+  unused anywhere in the app until now; this is its first real use,
+  reserved for the one genuinely irreversible action in the whole UI so it
+  reads as visually distinct from every other (safe, reversible)
+  navigation button.
+- Considered `Alert.alert()` (React Native's built-in confirm dialog)
+  first and rejected it: `react-native-web`'s implementation is a no-op
+  stub (`static alert() {}`, confirmed by reading the installed package
+  source) — on this app's actual deployment target, calling it would
+  silently do nothing at all, not even show a dialog. A native
+  `window.confirm()` fallback would work but renders as a jarring default
+  browser popup, inconsistent with the app's own visual language. Built a
+  small in-app confirmation panel instead, using existing components.
+
+**Verified end-to-end** with a scripted browser (not just `tsc`): typed
+"Erase all progress," confirmed the warning panel text and berry-red
+button render; tapped `Cancel` and confirmed the trigger button reappears
+untouched (progress unchanged); then tapped through to `Yes, erase
+everything` and confirmed it actually lands back on the onboarding screen
+reset to defaults. `npx tsc --noEmit` clean.
+
+**Decided:** keep it available in-app, on the Progress screen, as-is.
+Raised as an open question — the dev-only `localStorage`-seeding method
+above means it isn't *needed* for testing — but the call was to keep it
+as a real feature (a family wanting a fresh start, a shared device, etc.)
+now that the two-step confirmation actually closes the safety gap. Not
+revisiting unless something changes.
+
+**Voice:** added `speakUIPrompt()`, distinct from `speakWord()` — it
+always speaks English (`en-US`) since these are UI phrases, not target-
+language vocabulary. Wired to exactly one place: a `useEffect` on
+`screen === 'reward'` speaks "Great job! Want to play more, or see your
+progress?" once per lesson completion, guarded by `Speech.isSpeakingAsync()`
+first (same clip-avoidance pattern as the existing `handleAnswer`/
+`handleOppositeAnswer` confirmation-replay logic, so it can't cut off a
+still-playing correct-answer confirmation). Deliberately **not** added to
+Home/Lesson-preview/Progress: each of those already has one obvious
+primary action carried by size, color, and now an icon; narrating every
+screen transition on every one of many repeat sessions risks becoming the
+thing a parent mutes, for no real gain over what's already legible. Reward
+is the one screen with an actual branching choice (keep playing vs. the
+optional bonus activity vs. check progress), which is where a spoken frame
+earns its place.
+
+**Verified**, not just typed-checked: scripted a real headless-Chromium
+walkthrough (Playwright, installed locally with `--no-save` and removed
+afterward — not a project dependency) through onboarding → home → themes
+→ lesson preview → match → reward → progress against a real
+`npx expo export --platform web` build, screenshotting each step. No
+console errors; icons render correctly sized and laid out (`flexDirection:
+'row'` + `gap` on the button/top-link styles, which needed adding — they
+were column-centered for a single Text child before). `npx tsc --noEmit`
+clean.
+
+## Web touch-safety (toddler UX polish, in progress)
+
+`public/index.html` overrides Expo's default web export template (Expo
+resolves `public/index.html` before falling back to its own — confirmed
+against the installed SDK 57 `@expo/cli` source, since `docs.expo.dev` is
+unreachable from this environment's network policy). It adds, on top of
+the stock `react-native-web` reset:
+- A locked viewport meta (`maximum-scale=1, user-scalable=no`) plus
+  `touch-action: pan-y` on `html`/`body` — kills pinch-zoom and
+  double-tap-zoom while deliberately keeping vertical panning, because the
+  app has real `ScrollView`s (Themes path, Progress list); `touch-action:
+  none` (as literally suggested in the source analysis this came from)
+  would have silently broken scrolling there.
+- `overscroll-behavior: none` to kill pull-to-refresh/rubber-band
+  overscroll, and `-webkit-touch-callout`/`user-select: none` to kill the
+  long-press text-selection callout — a toddler resting palms on a tablet
+  triggers all three by accident.
+
+This only affects the web export (`public/index.html` has no native
+equivalent — iOS/Android don't have browser chrome to fight). Verified by
+running a real `npx expo export --platform web` and confirming the custom
+template's placeholders (`%LANG_ISO_CODE%`/`%WEB_TITLE%`) and `</head>`/
+`</body>` injection points still get filled in correctly by Expo's
+pipeline.
+
+**Real regression, found and fixed:** this block originally also set
+`body { position: fixed; width: 100% }` as an "extra guard against iOS
+bounce-scroll." That was wrong to add and has been removed. Reported on an
+actual phone: the page loaded pre-scrolled, with the top bar (Home/
+Progress — the only way to navigate away from a lesson) off-screen and
+unreachable. `position: fixed` directly on `<body>` (rather than a
+dedicated wrapper element) is a well-documented risky pattern on mobile
+Safari specifically, because of how it interacts with the dynamic
+address-bar/viewport-chrome height — confirmed via web search turning up
+multiple independent reports of this exact "page loads scrolled, fixed
+content off-screen until you touch it" symptom class (see e.g.
+[this gist](https://gist.github.com/nicolaskopp/637aa4e20c66fe41a6ea2a0773935f6e)
+and [Apple's own developer forums](https://developer.apple.com/forums/thread/744327)
+on `position: fixed` breaking after a while on iOS). Could not reproduce
+the exact bug in this environment — only Chromium is available here (no
+real WebKit/Safari, and fetching one isn't appropriate per this
+environment's guidance not to run `playwright install`), and Chromium's
+engine doesn't exhibit the same address-bar/fixed-position interaction, so
+a scripted mobile-viewport check here came back clean on *both* the buggy
+and fixed builds — inconclusive by construction, not evidence either way.
+The fix itself doesn't need that inconclusive test to be justified: it
+removes the one line in the entire touch-safety change that has this
+documented failure mode, on an actual field report that matches the
+documented symptom precisely, and `overscroll-behavior: none` (kept)
+already covers the original intent — preventing rubber-band overscroll —
+via a modern, well-supported property with no such risk. **Confirmed
+fixed on an actual phone** — the top bar is reachable and the page no
+longer loads pre-scrolled.
+
+**Landscape orientation lock was in the same source recommendation but was
+deliberately NOT done here** — `app.json`'s `orientation` is `"portrait"`
+and `DESIGN.md` explicitly says "Design for portrait mobile first." Locking
+to landscape would reverse an established design decision, not just add a
+touch-safety fix; flagged for a separate decision rather than folded in
+silently.
+
+## Non-punitive wrong-answer feedback (audited, partially fixed)
+
+The roadmap item guessed the wrong-answer sound was "likely already mostly
+true" given the speech-clipping fixes already made. Checked instead of
+assumed: `App.tsx` plays a literal `fail-buzz.mp3` on every wrong tap
+(Match-and-Listen, Find the Opposite, Memory Pairs). Since neither
+`ffmpeg`/`sox` nor a network path to fetch them was available in this
+environment, the actual waveform was decoded and measured directly
+(`pip install miniaudio numpy`, no external binary needed) rather than
+judged by ear or by filename alone:
+
+- `fail-buzz.mp3`: 0.55s, a **sustained ~131Hz drone** (flat RMS envelope
+  across nearly its whole length — a held tone, not a short blip),
+  RMS 0.408, peak 0.786, crest factor 1.93.
+- `success.mp3`: 2.09s, a bright ~1319Hz chime with a natural decay tail,
+  RMS 0.034, peak 0.307, crest factor 9.14.
+
+The fail sound is roughly **12x louder on average and 2.5x louder at peak**
+than the success sound, and its low, flat, sustained shape reads as a
+classic game-show "wrong buzzer" — the opposite of `PRODUCT.md`'s "mistakes
+should invite retry, not shame" and its anti-reference against "punitive
+mistake states." This wasn't a vague tone judgment; the numbers confirm it.
+
+**Fixed the loudness, not the timbre.** `FAIL_SOUND_VOLUME = 0.4` (set via
+`failPlayer.volume` in a `useEffect`, `expo-audio`'s per-player volume
+control) brings its peak amplitude down to roughly the success chime's
+peak, without needing a new sound asset. This still leaves the same buzzy
+131Hz drone underneath, just quieter — replacing the asset with something
+genuinely warmer (a soft "boop"/marimba blip) is a separate, larger call
+that needs an actual sourced sound to audition against real kids, not a
+guess made sight-unseen. Flagged in `ROADMAP.md`, not done here.
 
 ## Deployment
 

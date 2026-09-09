@@ -32,6 +32,18 @@ const SOUND_SPEECH_RATE = 0.22;
 // a wall of tiles for the right one loses more than they gain from extra
 // distractors. The correct tile is always included.
 const ANSWER_OPTIONS_CAP = 6;
+// The bundled fail-buzz.mp3 asset measures far louder and harsher than it
+// reads on the page: a sustained ~131Hz drone at roughly 12x the average
+// loudness (RMS) and 2.5x the peak amplitude of success.mp3's bright, brief
+// chime — a game-show "wrong buzzer," not the gentle "try again" nudge
+// PRODUCT.md calls for ("mistakes should invite retry, not shame"; no
+// "punitive mistake states"). Scaling playback volume down brings its peak
+// loudness to roughly the same order as the success chime's, without
+// needing a new sound asset. This only softens loudness, not the buzzy
+// tone itself — replacing the asset with something warmer is a separate,
+// larger call (see ROADMAP.md) that needs an actual sourced sound to
+// audition, not a guess.
+const FAIL_SOUND_VOLUME = 0.4;
 
 type LanguageId = 'hi' | 'ta';
 
@@ -49,6 +61,41 @@ function speakWord(text: string, language: LanguageId, onDone?: () => void) {
     onStopped: onDone,
     onError: onDone,
   });
+}
+
+// Distinct from speakWord: this speaks short English navigation phrases
+// (not target-language vocabulary), so it always uses en-US regardless of
+// the lesson language. Used sparingly - see the `screen === 'reward'`
+// effect below for why only that one screen gets a spoken cue.
+function speakUIPrompt(text: string) {
+  Speech.stop();
+  Speech.speak(text, { language: 'en-US', rate: SPEECH_RATE });
+}
+
+// Polls Speech.isSpeakingAsync() until it goes false (or maxWaitMs elapses,
+// as a safety net if speech somehow never reports finished) instead of
+// guessing a fixed delay. This exists specifically because a fixed delay
+// was the actual cause of the "doodh" -> "doo" clipping bug: handleAnswer/
+// handleOppositeAnswer's correct-answer path checks isSpeakingAsync once,
+// and — when the child taps correctly early enough that the question's
+// auto-play is still going — used to just wait a flat REACTION_PAUSE_MS
+// (1800ms) and hope the word had finished by then. A slower rate makes a
+// word take *longer* to say, so each previous "slow the speech down more"
+// fix (see the constants above) made a still-in-flight word more likely
+// to still be speaking when that flat window ended, not less — the
+// interruption bug this file already documents as fixed was only fixed
+// for the *confirmation replay itself*, not for the very next question's
+// auto-play, which also calls speakWord -> Speech.stop() and cuts off
+// whatever the previous question was still saying. Waiting for actual
+// idle instead of a guessed duration removes the race entirely, for any
+// word length or device speech-engine speed.
+async function waitForSpeechIdle(maxWaitMs: number) {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    const stillSpeaking = await Speech.isSpeakingAsync();
+    if (!stillSpeaking) return;
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
 }
 
 function shuffleItems<T>(items: T[]): T[] {
@@ -543,6 +590,10 @@ export default function App() {
   const successPlayer = useAudioPlayer(require('./assets/sounds/success.mp3'));
   const failPlayer = useAudioPlayer(require('./assets/sounds/fail-buzz.mp3'));
 
+  useEffect(() => {
+    failPlayer.volume = FAIL_SOUND_VOLUME;
+  }, [failPlayer]);
+
   function playSuccessSound() {
     successPlayer.seekTo(0);
     successPlayer.play();
@@ -580,6 +631,13 @@ export default function App() {
   const [oppositeAnswerOrder, setOppositeAnswerOrder] = useState<LessonItem[]>([]);
   const [oppositeSelectedAnswer, setOppositeSelectedAnswer] = useState<string | null>(null);
   const [oppositeFeedback, setOppositeFeedback] = useState('Find the opposite.');
+  // Guards the "erase all progress" action on the Progress screen: was a
+  // single, ungated tap with no confirmation - a child exploring the app
+  // (Progress is one of only two links every screen exposes, via the top
+  // bar) could permanently wipe both languages' learning history with one
+  // accidental tap, with no undo and no cloud backup (AsyncStorage only).
+  // See STATUS.md.
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   const themeItems = itemsForTheme(activeTheme, language);
   const activeThemeMeta = themes.find((theme) => theme.id === activeTheme);
@@ -618,6 +676,24 @@ export default function App() {
       speakWord(currentOppositeItem.word, currentOppositeItem.language);
     }
   }, [screen, oppositeIndex]);
+
+  // Reward is the one post-lesson screen with a genuine branching choice
+  // (keep playing vs. the optional bonus activity vs. check progress) -
+  // deliberately the only screen chrome that gets a spoken cue, rather
+  // than voicing every screen transition in the app. Home/Lesson-preview/
+  // Progress each have one obvious primary action already carried by
+  // button size, color, and (now) an icon; narrating those every single
+  // session risks becoming the thing parents mute, for no real gain over
+  // what's already legible. Guarded by isSpeakingAsync so this can't clip
+  // whatever the last correct-answer confirmation was still saying, same
+  // as the existing handleAnswer/handleOppositeAnswer pattern above.
+  useEffect(() => {
+    if (screen !== 'reward') return;
+    Speech.isSpeakingAsync().then((isSpeaking) => {
+      if (isSpeaking) return;
+      speakUIPrompt('Great job! Want to play more, or see your progress?');
+    });
+  }, [screen]);
 
   useEffect(() => {
     if (screen === 'memory') {
@@ -765,10 +841,17 @@ export default function App() {
     // question's initial auto-play is still going — a quick correct tap can
     // easily land before it finishes — don't call speakWord again: it stops
     // whatever is currently playing first, which was cutting the word off
-    // mid-syllable. Just let the in-flight audio finish undisturbed.
+    // mid-syllable ("doodh" -> "doo"). Wait for it to actually finish
+    // (waitForSpeechIdle polls real playback state) before advancing,
+    // rather than guessing a fixed delay was long enough — a flat guess
+    // was the actual bug: advanceToNext's own pause is a fixed
+    // REACTION_PAUSE_MS, and a slow, deliberately-stretched-out word can
+    // still be mid-syllable when that fixed window ends, at which point
+    // the *next* question's auto-play would call Speech.stop() and cut it
+    // off. Waiting for idle first removes the guess entirely.
     Speech.isSpeakingAsync().then((isSpeaking) => {
       if (isSpeaking) {
-        advanceToNext();
+        waitForSpeechIdle(MAX_SPEECH_WAIT_MS).then(advanceToNext);
         return;
       }
       speakWord(currentItem.word, currentItem.language, advanceToNext);
@@ -820,11 +903,16 @@ export default function App() {
       }, REACTION_PAUSE_MS);
     };
 
-    // Same interruption-avoidance as Match-and-Listen's confirmation replay:
-    // only re-speak if nothing is already playing, otherwise just advance.
+    // Same interruption-avoidance as Match-and-Listen's confirmation replay
+    // (see the comment there for why this waits for actual idle rather
+    // than a fixed delay): only re-speak if nothing is already playing.
     Speech.isSpeakingAsync().then((isSpeaking) => {
-      if (isSpeaking || !correctItem) {
+      if (!correctItem) {
         advanceToNext();
+        return;
+      }
+      if (isSpeaking) {
+        waitForSpeechIdle(MAX_SPEECH_WAIT_MS).then(advanceToNext);
         return;
       }
       speakWord(correctItem.word, correctItem.language, advanceToNext);
@@ -874,6 +962,7 @@ export default function App() {
   }
 
   function resetPrototype() {
+    setConfirmingReset(false);
     setProgress(initialProgress);
     setMatchIndex(0);
     setAttempts({});
@@ -894,11 +983,13 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {screen !== 'onboarding' ? (
           <View style={styles.topBar}>
-            <Pressable style={styles.topLink} onPress={() => setScreen('home')} accessibilityRole="button">
+            <Pressable style={styles.topLink} onPress={() => setScreen('home')} accessibilityRole="button" accessibilityLabel="Home">
+              <Text style={styles.topLinkIcon}>🏠</Text>
               <Text style={styles.topLinkText}>Home</Text>
             </Pressable>
             <Text style={styles.brandSmall}>{languageMeta.name} Quest</Text>
-            <Pressable style={styles.topLink} onPress={() => setScreen('progress')} accessibilityRole="button">
+            <Pressable style={styles.topLink} onPress={() => setScreen('progress')} accessibilityRole="button" accessibilityLabel="Progress">
+              <Text style={styles.topLinkIcon}>⭐</Text>
               <Text style={styles.topLinkText}>Progress</Text>
             </Pressable>
           </View>
@@ -1000,13 +1091,14 @@ export default function App() {
             </View>
 
             <PrimaryButton
+              icon="▶️"
               label={homeLearnedCount > 0 ? 'Continue' : 'Start first lesson'}
               onPress={() => {
                 setActiveTheme(homeThemeId);
                 setScreen('lesson');
               }}
             />
-            <SecondaryButton label="Choose a theme" onPress={() => setScreen('themes')} />
+            <SecondaryButton icon="🗺️" label="Choose a theme" onPress={() => setScreen('themes')} />
           </ScreenShell>
         )}
 
@@ -1088,8 +1180,8 @@ export default function App() {
                 <WordPreview key={item.id} item={item} showPronunciation={adultSupport} onPress={() => speakWord(item.word, item.language)} />
               ))}
             </View>
-            <PrimaryButton label="Play" onPress={startLesson} />
-            <SecondaryButton label="Back to themes" onPress={() => setScreen('themes')} />
+            <PrimaryButton icon="▶️" label="Play" onPress={startLesson} />
+            <SecondaryButton icon="🗺️" label="Back to themes" onPress={() => setScreen('themes')} />
           </ScreenShell>
         )}
 
@@ -1228,13 +1320,13 @@ export default function App() {
                 </View>
               ) : null}
             </View>
-            <PrimaryButton label="Play next" onPress={() => setScreen('themes')} />
+            <PrimaryButton icon="▶️" label="Play next" onPress={() => setScreen('themes')} />
             {isOppositesTheme ? (
-              <SecondaryButton label="Find the Opposite (optional)" onPress={startOppositeGame} />
+              <SecondaryButton icon="↔️" label="Find the Opposite (optional)" onPress={startOppositeGame} />
             ) : (
-              <SecondaryButton label="Play Memory Pairs (optional)" onPress={startMemoryPairs} />
+              <SecondaryButton icon="🧠" label="Play Memory Pairs (optional)" onPress={startMemoryPairs} />
             )}
-            <SecondaryButton label="See progress" onPress={() => setScreen('progress')} />
+            <SecondaryButton icon="⭐" label="See progress" onPress={() => setScreen('progress')} />
           </ScreenShell>
         )}
 
@@ -1260,8 +1352,32 @@ export default function App() {
                 </View>
               ))}
             </View>
-            <PrimaryButton label={`Review ${activeThemeMeta?.title ?? 'Food'}`} onPress={startLesson} />
-            <SecondaryButton label="Reset prototype" onPress={resetPrototype} />
+            <PrimaryButton icon="▶️" label={`Review ${activeThemeMeta?.title ?? 'Food'}`} onPress={startLesson} />
+            {/* Erases every learned word for both Hindi and Tamil, with no
+                undo and no cloud backup (AsyncStorage only) - see STATUS.md.
+                Deliberately no icon on the trigger: this shouldn't look any
+                more inviting to tap than plain text already does. Requires
+                a second, explicitly-worded tap on a visually distinct
+                (berry-red) confirm button before anything happens - a
+                single accidental tap can no longer wipe progress. */}
+            {confirmingReset ? (
+              <View style={styles.resetConfirmPanel}>
+                <Text style={styles.resetConfirmText}>
+                  Erase all progress for both Hindi and Tamil? This can't be undone.
+                </Text>
+                <Pressable
+                  style={styles.destructiveButton}
+                  onPress={resetPrototype}
+                  accessibilityRole="button"
+                  accessibilityLabel="Yes, erase everything"
+                >
+                  <Text style={styles.destructiveButtonText}>Yes, erase everything</Text>
+                </Pressable>
+                <SecondaryButton label="Cancel" onPress={() => setConfirmingReset(false)} />
+              </View>
+            ) : (
+              <SecondaryButton label="Erase all progress" onPress={() => setConfirmingReset(true)} />
+            )}
           </ScreenShell>
         )}
       </ScrollView>
@@ -1273,17 +1389,29 @@ function ScreenShell({ children }: { children: React.ReactNode }) {
   return <View style={styles.screenShell}>{children}</View>;
 }
 
-function PrimaryButton({ label, onPress }: { label: string; onPress: () => void }) {
+// `icon` is a small emoji glyph shown before the label so a non-reading
+// child has a non-text cue for "what does this button do" during a shared
+// session, per PRODUCT.md's bar for anything the child taps directly (see
+// STATUS.md's "Less English text" audit). It's optional and omitted for
+// buttons that should stay plain, undecorated text on purpose — e.g. the
+// "Reset prototype" debug button, which shouldn't look any more inviting
+// to tap than it already does.
+// accessibilityLabel is set explicitly to the plain label: React Native
+// treats a Pressable with accessibilityLabel as one accessible node, so
+// the decorative icon Text isn't separately announced by a screen reader.
+function PrimaryButton({ label, icon, onPress }: { label: string; icon?: string; onPress: () => void }) {
   return (
-    <Pressable style={styles.primaryButton} onPress={onPress} accessibilityRole="button">
+    <Pressable style={styles.primaryButton} onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
+      {icon ? <Text style={styles.buttonIcon}>{icon}</Text> : null}
       <Text style={styles.primaryButtonText}>{label}</Text>
     </Pressable>
   );
 }
 
-function SecondaryButton({ label, onPress }: { label: string; onPress: () => void }) {
+function SecondaryButton({ label, icon, onPress }: { label: string; icon?: string; onPress: () => void }) {
   return (
-    <Pressable style={styles.secondaryButton} onPress={onPress} accessibilityRole="button">
+    <Pressable style={styles.secondaryButton} onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
+      {icon ? <Text style={styles.buttonIcon}>{icon}</Text> : null}
       <Text style={styles.secondaryButtonText}>{label}</Text>
     </Pressable>
   );
@@ -1432,14 +1560,18 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   topLink: {
+    alignItems: 'center',
     backgroundColor: '#F7F1DF',
     borderColor: '#E4D4A5',
     borderRadius: 14,
     borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
   topLinkText: { color: '#24324C', fontSize: 14, fontWeight: '700' },
+  topLinkIcon: { fontSize: 14 },
   brandSmall: { color: '#596270', fontSize: 14, fontWeight: '800' },
   screenShell: { gap: 16, padding: 20 },
   heroRow: { alignItems: 'center', flexDirection: 'row', gap: 18 },
@@ -1516,6 +1648,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#B9780D',
     borderRadius: 16,
     minHeight: 54,
+    flexDirection: 'row',
+    gap: 8,
     justifyContent: 'center',
     paddingHorizontal: 18,
     paddingVertical: 14,
@@ -1528,11 +1662,41 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     minHeight: 52,
+    flexDirection: 'row',
+    gap: 8,
     justifyContent: 'center',
     paddingHorizontal: 18,
     paddingVertical: 13,
   },
   secondaryButtonText: { color: '#24324C', fontSize: 16, fontWeight: '800' },
+  // Shared by PrimaryButton/SecondaryButton's optional icon. Emoji glyphs
+  // render in their own full color regardless of a Text `color` style, so
+  // this only needs to size them, not tint them.
+  buttonIcon: { fontSize: 18 },
+  // "Erase all progress" confirmation (Progress screen). destructiveButton
+  // uses DESIGN.md's documented `--color-berry` token (oklch(0.620 0.160
+  // 20) -> #D5565D) - defined in the design system already but not used
+  // anywhere else in the app until now. Deliberately the only red/berry
+  // fill in the whole UI, reserved for this one irreversible action.
+  resetConfirmPanel: {
+    backgroundColor: '#FFF0EB',
+    borderColor: '#E7755F',
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 10,
+    padding: 16,
+  },
+  resetConfirmText: { color: '#7A2E20', fontSize: 14, fontWeight: '700', lineHeight: 20 },
+  destructiveButton: {
+    alignItems: 'center',
+    backgroundColor: '#D5565D',
+    borderRadius: 16,
+    justifyContent: 'center',
+    minHeight: 52,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+  },
+  destructiveButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
   statsRow: { flexDirection: 'row', gap: 12 },
   statCard: {
     backgroundColor: '#EFF7F0',

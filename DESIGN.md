@@ -38,6 +38,13 @@ Use the React Native system font stack for performance and familiarity. Devanaga
 - Game tiles: large touch targets with clear selected/correct/needs-retry states.
 - Mithu mascot: simple 2D parrot built from rounded shapes; expressive but calm.
 - Progress chips: short labels with strong contrast and simple status language.
+- Dark accent fill (undocumented until now, already in use in three places —
+  written down here so it stays deliberate rather than drifting further):
+  a navy fill close to `--color-ink` (lightened for legibility as a
+  background rather than text) marks an "active/selected" state — the
+  active language/track segment, the level badge, and the face-down Memory
+  Pairs card. Always paired with white text. Not a fourth arbitrary color;
+  treat it as the one dark accent, reserved for state, not decoration.
 
 ## Vocabulary Icons
 

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <title>%WEB_TITLE%</title>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+    <!--
+      Toddler touch-safety lock (ROADMAP.md "Toddler-friendly UX polish").
+      A 2-3 year old rests palms on the screen and pinches/swipes by accident
+      far more than an adult does. This removes browser-chrome gestures that
+      would yank them out of the game, without touching in-game touch
+      handling (tile taps, ScrollView) at all:
+        - pinch-zoom / double-tap-zoom: killed by the viewport meta above
+          (maximum-scale=1, user-scalable=no) plus touch-action below.
+        - pull-to-refresh / rubber-band overscroll: overscroll-behavior.
+        - long-press text-selection callout: -webkit-touch-callout / user-select.
+      touch-action is `pan-y`, not `none` - the app has vertical ScrollViews
+      (Themes path, Progress list) that still need to scroll; `none` would
+      silently break them. `pan-y` allows vertical panning while still
+      disabling pinch-zoom and horizontal panning.
+
+      NOTE: this block originally also set `body { position: fixed; width:
+      100% }` as an extra iOS-bounce guard. Removed - it caused a real
+      regression reported on phone: the page loaded pre-scrolled with the
+      top bar (Home/Progress) off-screen and unreachable. `position: fixed`
+      on `<body>` directly (rather than a dedicated wrapper element) is a
+      well-known-risky pattern on mobile Safari specifically because of how
+      it interacts with the dynamic address-bar/viewport-chrome height —
+      see https://bugs.webkit.org and general mobile-web guidance against
+      it. `overscroll-behavior: none` below already covers the pull-to-
+      refresh/rubber-band case on its own without that risk, so nothing
+      else needs to compensate for removing it.
+    -->
+    <style id="toddler-touch-safety">
+      html,
+      body {
+        overscroll-behavior: none;
+        touch-action: pan-y;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>
