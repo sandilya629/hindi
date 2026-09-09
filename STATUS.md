@@ -163,6 +163,54 @@ Fixed with a separate `UI_PROMPT_SPEECH_RATE = 0.95` constant (near-natural
 pace, not the toddler-vocabulary crawl) — `SPEECH_RATE`/`SOUND_SPEECH_RATE`
 were not touched.
 
+**Follow-up feedback: pace was fixed, but the voice itself still read as
+"too computer generated" — wants "softer, more human, warm and
+encouraging."** No rate or pitch tweak fixes that; it's the underlying
+synthesized voice, not how fast it talks. Added `getPreferredEnglishVoice()`
+(cached after first successful lookup), which asks
+`Speech.getAvailableVoicesAsync()` for a better-than-default English voice
+and points `speakUIPrompt` at it when one exists:
+- Prefers `quality === Speech.VoiceQuality.Enhanced` first — meaningful on
+  iOS/Android, where expo-speech reports a real quality flag.
+- Falls back to a name-keyword heuristic (`/natural|online|neural|enhanced/i`)
+  for web, where expo-speech's web module always reports `Default` for
+  every voice regardless of actual quality (confirmed by reading the
+  installed package source) — browsers/OSes that expose a real neural/cloud
+  voice alongside classic robotic ones typically label it this way (e.g.
+  Edge on Windows ships "Microsoft `<Name>` Online (Natural)" next to the
+  older desktop voices).
+- Falls back to no explicit voice (today's unmodified behavior) if nothing
+  better is found — can only improve the outcome, never regress it *in
+  the voice-selection logic itself*.
+
+**Real bug found and fixed before shipping, not just theorized:** naively
+awaiting `getAvailableVoicesAsync()` is unsafe. Read the installed
+`expo-speech` web source directly: when the browser's voice list is
+empty, it waits on `speechSynthesis.onvoiceschanged` — and that promise
+**never resolves** if that event never fires, which is exactly what
+happens on a device with zero installed voices. Verified this hang with a
+mocked zero-voice browser in a scripted test — the Reward screen's spoken
+line went completely silent, hung forever waiting on that lookup. Fixed
+with a 400ms timeout race (`Promise.race` against a timer) so a slow or
+absent voice list can never block speech from happening at all; a timeout
+result isn't cached, so a later call can still pick up voices that load in
+after the timeout (many browsers populate the list asynchronously shortly
+after page load). Verified both paths with scripted browser tests: a mixed
+voice list (robotic defaults + one "Online (Natural)" voice) correctly
+picks the Natural one; a zero-voice list correctly falls back to `null`
+within the timeout with no hang and no crash.
+
+**Honest ceiling of this fix:** it can only pick a *better system voice*,
+if the device actually has one installed. It cannot fabricate warmth a
+device's voice pool doesn't have — some browsers/OSes only expose flat,
+dated voices with nothing "Natural"/"Enhanced" available at all, and this
+falls back to the same default in that case (no worse than before, not
+necessarily better either). The only way to guarantee genuine human warmth
+regardless of device is a real pre-recorded voice clip for this one fixed
+phrase — the same pattern already used for `success.mp3`/`fail-buzz.mp3` —
+which needs an actual sourced recording, not something to guess at code-side.
+Not done here; worth raising if this code-level improvement isn't enough.
+
 **Lesson learned, don't reintroduce this bug — this note originally
 claimed the bug below was fixed; it wasn't, only half of it was.**
 `speakWord` always calls `Speech.stop()` before speaking, which is correct
