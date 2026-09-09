@@ -305,16 +305,12 @@ untouched (progress unchanged); then tapped through to `Yes, erase
 everything` and confirmed it actually lands back on the onboarding screen
 reset to defaults. `npx tsc --noEmit` clean.
 
-**Still open, a real decision rather than a mechanical fix:** should this
-control exist in production at all? `STATUS.md`'s own testing methodology
-section already documents a dev-only way to reset state (seed
-`localStorage`'s `hindi-quest-progress` key directly, then reload) that
-needs no in-app button. That makes the in-app control read as a leftover
-prototyping convenience rather than a feature real families asked for.
-The fix above closes the *safety* gap (no more one-tap accidental wipe)
-regardless of that answer, but removing it from the child-facing Progress
-screen entirely — or moving it somewhere a parent would look but a child
-exploring wouldn't — is worth deciding, not assumed here.
+**Decided:** keep it available in-app, on the Progress screen, as-is.
+Raised as an open question — the dev-only `localStorage`-seeding method
+above means it isn't *needed* for testing — but the call was to keep it
+as a real feature (a family wanting a fresh start, a shared device, etc.)
+now that the two-step confirmation actually closes the safety gap. Not
+revisiting unless something changes.
 
 **Voice:** added `speakUIPrompt()`, distinct from `speakWord()` — it
 always speaks English (`en-US`) since these are UI phrases, not target-
