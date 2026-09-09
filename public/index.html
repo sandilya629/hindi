@@ -40,6 +40,18 @@
       (Themes path, Progress list) that still need to scroll; `none` would
       silently break them. `pan-y` allows vertical panning while still
       disabling pinch-zoom and horizontal panning.
+
+      NOTE: this block originally also set `body { position: fixed; width:
+      100% }` as an extra iOS-bounce guard. Removed - it caused a real
+      regression reported on phone: the page loaded pre-scrolled with the
+      top bar (Home/Progress) off-screen and unreachable. `position: fixed`
+      on `<body>` directly (rather than a dedicated wrapper element) is a
+      well-known-risky pattern on mobile Safari specifically because of how
+      it interacts with the dynamic address-bar/viewport-chrome height —
+      see https://bugs.webkit.org and general mobile-web guidance against
+      it. `overscroll-behavior: none` below already covers the pull-to-
+      refresh/rubber-band case on its own without that risk, so nothing
+      else needs to compensate for removing it.
     -->
     <style id="toddler-touch-safety">
       html,
@@ -49,10 +61,6 @@
         -webkit-touch-callout: none;
         -webkit-user-select: none;
         user-select: none;
-      }
-      body {
-        position: fixed;
-        width: 100%;
       }
     </style>
   </head>

@@ -193,6 +193,31 @@ starts immediately after. Post-fix, identical scenario: the word plays
 all the way to its own natural `end` event at 2501ms, with no
 interrupting cancel. `npx tsc --noEmit` clean.
 
+**Also verified on Starter Sounds and Find the Opposite specifically**
+(not just Food/Match-and-Listen), since both go through code that either
+looked identical or turned out to be a second, distinct call site:
+- **Starter Sounds** (single-letter items, `SOUND_SPEECH_RATE`) — same
+  `handleAnswer` function, so this was mostly confirming the fix is
+  content-agnostic rather than expecting a different result: seeded
+  `localStorage`'s `hindi-quest-progress` with Food/Colors/Opposites/
+  Opposites Two/Family all `'known'` (per this file's own testing
+  methodology below) to land directly on Starter Sounds without playing
+  four unrelated themes first, then ran the same fast-tap-during-auto-play
+  scenario. A single mocked letter ("र", "अ", "ल" across runs) played to
+  its natural `end` every time, no premature cancel.
+- **Find the Opposite** (`handleOppositeAnswer`) — a genuinely separate
+  function with its own copy of the same fix, so this needed its own
+  check, not an inference from the Match-and-Listen result. Seeded
+  Food/Colors as `'known'` to land on Opposites, played through its
+  Match-and-Listen round (confirming `handleAnswer` again, this time with
+  Opposites' own content — "दिन" completed naturally too), reached Reward,
+  opened "Find the Opposite (optional)," then fast-tapped a correct
+  opposite ("नीचे" → "ऊपर") during its own mocked auto-play. The captured
+  log ended up spanning several consecutive question transitions (into a
+  second Find-the-Opposite round) rather than just the one tap checked —
+  every single word's `speak` → `end` pair completed naturally before the
+  next word's `speak` ever fired, across the whole stretch.
+
 ## Palette audit (checked, no change made)
 
 The roadmap's "warmer palette pass" item started from the outside
@@ -391,16 +416,42 @@ the stock `react-native-web` reset:
   overscroll, and `-webkit-touch-callout`/`user-select: none` to kill the
   long-press text-selection callout — a toddler resting palms on a tablet
   triggers all three by accident.
-- `position: fixed` on `body` as an extra guard against iOS bounce-scroll,
-  consistent with the existing reset's `body { overflow: hidden }`.
 
 This only affects the web export (`public/index.html` has no native
 equivalent — iOS/Android don't have browser chrome to fight). Verified by
 running a real `npx expo export --platform web` and confirming the custom
 template's placeholders (`%LANG_ISO_CODE%`/`%WEB_TITLE%`) and `</head>`/
 `</body>` injection points still get filled in correctly by Expo's
-pipeline; not yet verified live in a browser against actual tablet
-touch/pinch input — do that before calling this item done.
+pipeline.
+
+**Real regression, found and fixed:** this block originally also set
+`body { position: fixed; width: 100% }` as an "extra guard against iOS
+bounce-scroll." That was wrong to add and has been removed. Reported on an
+actual phone: the page loaded pre-scrolled, with the top bar (Home/
+Progress — the only way to navigate away from a lesson) off-screen and
+unreachable. `position: fixed` directly on `<body>` (rather than a
+dedicated wrapper element) is a well-documented risky pattern on mobile
+Safari specifically, because of how it interacts with the dynamic
+address-bar/viewport-chrome height — confirmed via web search turning up
+multiple independent reports of this exact "page loads scrolled, fixed
+content off-screen until you touch it" symptom class (see e.g.
+[this gist](https://gist.github.com/nicolaskopp/637aa4e20c66fe41a6ea2a0773935f6e)
+and [Apple's own developer forums](https://developer.apple.com/forums/thread/744327)
+on `position: fixed` breaking after a while on iOS). Could not reproduce
+the exact bug in this environment — only Chromium is available here (no
+real WebKit/Safari, and fetching one isn't appropriate per this
+environment's guidance not to run `playwright install`), and Chromium's
+engine doesn't exhibit the same address-bar/fixed-position interaction, so
+a scripted mobile-viewport check here came back clean on *both* the buggy
+and fixed builds — inconclusive by construction, not evidence either way.
+The fix itself doesn't need that inconclusive test to be justified: it
+removes the one line in the entire touch-safety change that has this
+documented failure mode, on an actual field report that matches the
+documented symptom precisely, and `overscroll-behavior: none` (kept)
+already covers the original intent — preventing rubber-band overscroll —
+via a modern, well-supported property with no such risk. **Ask for
+confirmation on a real phone once this is deployed**, since it couldn't be
+verified end-to-end here.
 
 **Landscape orientation lock was in the same source recommendation but was
 deliberately NOT done here** — `app.json`'s `orientation` is `"portrait"`
