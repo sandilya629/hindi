@@ -32,6 +32,18 @@ const SOUND_SPEECH_RATE = 0.22;
 // a wall of tiles for the right one loses more than they gain from extra
 // distractors. The correct tile is always included.
 const ANSWER_OPTIONS_CAP = 6;
+// The bundled fail-buzz.mp3 asset measures far louder and harsher than it
+// reads on the page: a sustained ~131Hz drone at roughly 12x the average
+// loudness (RMS) and 2.5x the peak amplitude of success.mp3's bright, brief
+// chime — a game-show "wrong buzzer," not the gentle "try again" nudge
+// PRODUCT.md calls for ("mistakes should invite retry, not shame"; no
+// "punitive mistake states"). Scaling playback volume down brings its peak
+// loudness to roughly the same order as the success chime's, without
+// needing a new sound asset. This only softens loudness, not the buzzy
+// tone itself — replacing the asset with something warmer is a separate,
+// larger call (see ROADMAP.md) that needs an actual sourced sound to
+// audition, not a guess.
+const FAIL_SOUND_VOLUME = 0.4;
 
 type LanguageId = 'hi' | 'ta';
 
@@ -542,6 +554,10 @@ const LANGUAGE_STORAGE_KEY = 'hindi-quest-language';
 export default function App() {
   const successPlayer = useAudioPlayer(require('./assets/sounds/success.mp3'));
   const failPlayer = useAudioPlayer(require('./assets/sounds/fail-buzz.mp3'));
+
+  useEffect(() => {
+    failPlayer.volume = FAIL_SOUND_VOLUME;
+  }, [failPlayer]);
 
   function playSuccessSound() {
     successPlayer.seekTo(0);

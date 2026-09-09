@@ -192,13 +192,37 @@ to landscape would reverse an established design decision, not just add a
 touch-safety fix; flagged for a separate decision rather than folded in
 silently.
 
-**Also surfaced in passing, worth a look before closing out the
-"non-punitive wrong-answer feedback" roadmap item:** there is an active
-`fail-buzz.mp3` played on wrong answers (`failPlayer` in `App.tsx`). That
-roadmap item guessed this was "likely already mostly true" given the
-speech-clipping fixes already made — a literal buzz sound suggests it's
-worth actually listening to before assuming it's fine; `PRODUCT.md`'s
-anti-references explicitly rule out "punitive mistake states."
+## Non-punitive wrong-answer feedback (audited, partially fixed)
+
+The roadmap item guessed the wrong-answer sound was "likely already mostly
+true" given the speech-clipping fixes already made. Checked instead of
+assumed: `App.tsx` plays a literal `fail-buzz.mp3` on every wrong tap
+(Match-and-Listen, Find the Opposite, Memory Pairs). Since neither
+`ffmpeg`/`sox` nor a network path to fetch them was available in this
+environment, the actual waveform was decoded and measured directly
+(`pip install miniaudio numpy`, no external binary needed) rather than
+judged by ear or by filename alone:
+
+- `fail-buzz.mp3`: 0.55s, a **sustained ~131Hz drone** (flat RMS envelope
+  across nearly its whole length — a held tone, not a short blip),
+  RMS 0.408, peak 0.786, crest factor 1.93.
+- `success.mp3`: 2.09s, a bright ~1319Hz chime with a natural decay tail,
+  RMS 0.034, peak 0.307, crest factor 9.14.
+
+The fail sound is roughly **12x louder on average and 2.5x louder at peak**
+than the success sound, and its low, flat, sustained shape reads as a
+classic game-show "wrong buzzer" — the opposite of `PRODUCT.md`'s "mistakes
+should invite retry, not shame" and its anti-reference against "punitive
+mistake states." This wasn't a vague tone judgment; the numbers confirm it.
+
+**Fixed the loudness, not the timbre.** `FAIL_SOUND_VOLUME = 0.4` (set via
+`failPlayer.volume` in a `useEffect`, `expo-audio`'s per-player volume
+control) brings its peak amplitude down to roughly the success chime's
+peak, without needing a new sound asset. This still leaves the same buzzy
+131Hz drone underneath, just quieter — replacing the asset with something
+genuinely warmer (a soft "boop"/marimba blip) is a separate, larger call
+that needs an actual sourced sound to audition against real kids, not a
+guess made sight-unseen. Flagged in `ROADMAP.md`, not done here.
 
 ## Deployment
 

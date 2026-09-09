@@ -68,12 +68,18 @@ the reasoning isn't lost if it comes up again.
     prompts so a non-reading 3-5 year old can navigate unassisted.
     Complements work already done on audio pacing (see `SPEECH_RATE`
     history in `STATUS.md`).
-  - **Non-punitive wrong-answer feedback, audited.** Confirm the current
-    wrong-answer state (visual/audio) reads as gentle redirection rather
-    than a buzzer/failure state, in the same spirit as the existing "Find
-    the Opposite" and Match-and-Listen flows. Likely already mostly true
-    given the audio-clipping fixes already made — a verification pass,
-    not necessarily new code.
+  - **Non-punitive wrong-answer feedback — audited, loudness fixed, tone
+    still open.** Turned out not to be "likely already fine": measuring the
+    actual waveform (see `STATUS.md`) confirmed the bundled `fail-buzz.mp3`
+    is a sustained, ~131Hz drone playing roughly 12x louder (average) and
+    2.5x louder (peak) than the success chime — a real game-show "wrong
+    buzzer," contradicting `PRODUCT.md`'s "mistakes should invite retry,
+    not shame." `FAIL_SOUND_VOLUME` now scales it down to match the
+    success sound's peak loudness. Still open: the sound is quieter but
+    still the same buzzy tone underneath — swapping in a genuinely warmer
+    "oops" sound (a soft boop/marimba blip) needs an actual sourced sound
+    file to audition against real kids, not a guess; worth doing before
+    calling this item fully closed.
 
   Sequencing: these are being worked in parallel with Tamil verification,
   not behind it — playtesting/verification of these changes happens
