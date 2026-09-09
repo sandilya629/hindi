@@ -237,7 +237,59 @@ the real screens in `App.tsx`:
   icon fits each button, whether the mascot should voice the label) rather
   than a mechanical fix — not guessed at here; needs a call before doing.
 
-No text or code changed for this item.
+**Follow-up: designed and built.** `PrimaryButton`/`SecondaryButton` now
+take an optional `icon` prop (a small emoji glyph rendered before the
+label; the components' Pressable carries an explicit `accessibilityLabel`
+set to the plain label text, so the decorative icon isn't separately
+announced by a screen reader — RN treats an accessible element with an
+explicit label as one node, subsuming its children). The top-bar Home/
+Progress links (plain `Pressable`s, not the shared button components) got
+the same treatment inline. One consistent icon language across every
+post-setup screen — repeating an icon for the same destination/action
+everywhere it appears, like real wayfinding signage, rather than a
+different icon per screen for the same action:
+
+- 🏠 Home, ⭐ Progress — top bar, every screen
+- 🗺️ any button that goes to the themes map (`Choose a theme`,
+  `Back to themes`)
+- ▶️ any button that starts/continues/replays a lesson (`Continue`/
+  `Start first lesson`, `Play`, `Play next`, `Review <Theme>`)
+- 🧠 `Play Memory Pairs (optional)`, ↔️ `Find the Opposite (optional)`
+- **Deliberately no icon:** `Reset prototype` on the Progress screen. It
+  wipes all progress — it should look less inviting to tap than the rest,
+  not more, so it was left out of the icon system on purpose rather than
+  overlooked. Separately worth flagging (not fixed here, different
+  question than icon design): this button is a dev/debug leftover with no
+  gate in front of it, live in the same production build a toddler plays —
+  worth deciding whether to remove it, gate it behind the same kind of
+  parent-check the outside BoloBee analysis called a "Parent Gate," or at
+  minimum move it off the child-facing Progress screen.
+
+**Voice:** added `speakUIPrompt()`, distinct from `speakWord()` — it
+always speaks English (`en-US`) since these are UI phrases, not target-
+language vocabulary. Wired to exactly one place: a `useEffect` on
+`screen === 'reward'` speaks "Great job! Want to play more, or see your
+progress?" once per lesson completion, guarded by `Speech.isSpeakingAsync()`
+first (same clip-avoidance pattern as the existing `handleAnswer`/
+`handleOppositeAnswer` confirmation-replay logic, so it can't cut off a
+still-playing correct-answer confirmation). Deliberately **not** added to
+Home/Lesson-preview/Progress: each of those already has one obvious
+primary action carried by size, color, and now an icon; narrating every
+screen transition on every one of many repeat sessions risks becoming the
+thing a parent mutes, for no real gain over what's already legible. Reward
+is the one screen with an actual branching choice (keep playing vs. the
+optional bonus activity vs. check progress), which is where a spoken frame
+earns its place.
+
+**Verified**, not just typed-checked: scripted a real headless-Chromium
+walkthrough (Playwright, installed locally with `--no-save` and removed
+afterward — not a project dependency) through onboarding → home → themes
+→ lesson preview → match → reward → progress against a real
+`npx expo export --platform web` build, screenshotting each step. No
+console errors; icons render correctly sized and laid out (`flexDirection:
+'row'` + `gap` on the button/top-link styles, which needed adding — they
+were column-centered for a single Text child before). `npx tsc --noEmit`
+clean.
 
 ## Web touch-safety (toddler UX polish, in progress)
 

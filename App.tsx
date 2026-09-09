@@ -63,6 +63,15 @@ function speakWord(text: string, language: LanguageId, onDone?: () => void) {
   });
 }
 
+// Distinct from speakWord: this speaks short English navigation phrases
+// (not target-language vocabulary), so it always uses en-US regardless of
+// the lesson language. Used sparingly - see the `screen === 'reward'`
+// effect below for why only that one screen gets a spoken cue.
+function speakUIPrompt(text: string) {
+  Speech.stop();
+  Speech.speak(text, { language: 'en-US', rate: SPEECH_RATE });
+}
+
 function shuffleItems<T>(items: T[]): T[] {
   const copy = [...items];
   for (let i = copy.length - 1; i > 0; i -= 1) {
@@ -635,6 +644,24 @@ export default function App() {
     }
   }, [screen, oppositeIndex]);
 
+  // Reward is the one post-lesson screen with a genuine branching choice
+  // (keep playing vs. the optional bonus activity vs. check progress) -
+  // deliberately the only screen chrome that gets a spoken cue, rather
+  // than voicing every screen transition in the app. Home/Lesson-preview/
+  // Progress each have one obvious primary action already carried by
+  // button size, color, and (now) an icon; narrating those every single
+  // session risks becoming the thing parents mute, for no real gain over
+  // what's already legible. Guarded by isSpeakingAsync so this can't clip
+  // whatever the last correct-answer confirmation was still saying, same
+  // as the existing handleAnswer/handleOppositeAnswer pattern above.
+  useEffect(() => {
+    if (screen !== 'reward') return;
+    Speech.isSpeakingAsync().then((isSpeaking) => {
+      if (isSpeaking) return;
+      speakUIPrompt('Great job! Want to play more, or see your progress?');
+    });
+  }, [screen]);
+
   useEffect(() => {
     if (screen === 'memory') {
       const cards: MemoryCard[] = itemsForTheme(activeTheme, language).slice(0, 4).flatMap((item) => [
@@ -910,11 +937,13 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {screen !== 'onboarding' ? (
           <View style={styles.topBar}>
-            <Pressable style={styles.topLink} onPress={() => setScreen('home')} accessibilityRole="button">
+            <Pressable style={styles.topLink} onPress={() => setScreen('home')} accessibilityRole="button" accessibilityLabel="Home">
+              <Text style={styles.topLinkIcon}>🏠</Text>
               <Text style={styles.topLinkText}>Home</Text>
             </Pressable>
             <Text style={styles.brandSmall}>{languageMeta.name} Quest</Text>
-            <Pressable style={styles.topLink} onPress={() => setScreen('progress')} accessibilityRole="button">
+            <Pressable style={styles.topLink} onPress={() => setScreen('progress')} accessibilityRole="button" accessibilityLabel="Progress">
+              <Text style={styles.topLinkIcon}>⭐</Text>
               <Text style={styles.topLinkText}>Progress</Text>
             </Pressable>
           </View>
@@ -1016,13 +1045,14 @@ export default function App() {
             </View>
 
             <PrimaryButton
+              icon="▶️"
               label={homeLearnedCount > 0 ? 'Continue' : 'Start first lesson'}
               onPress={() => {
                 setActiveTheme(homeThemeId);
                 setScreen('lesson');
               }}
             />
-            <SecondaryButton label="Choose a theme" onPress={() => setScreen('themes')} />
+            <SecondaryButton icon="🗺️" label="Choose a theme" onPress={() => setScreen('themes')} />
           </ScreenShell>
         )}
 
@@ -1104,8 +1134,8 @@ export default function App() {
                 <WordPreview key={item.id} item={item} showPronunciation={adultSupport} onPress={() => speakWord(item.word, item.language)} />
               ))}
             </View>
-            <PrimaryButton label="Play" onPress={startLesson} />
-            <SecondaryButton label="Back to themes" onPress={() => setScreen('themes')} />
+            <PrimaryButton icon="▶️" label="Play" onPress={startLesson} />
+            <SecondaryButton icon="🗺️" label="Back to themes" onPress={() => setScreen('themes')} />
           </ScreenShell>
         )}
 
@@ -1244,13 +1274,13 @@ export default function App() {
                 </View>
               ) : null}
             </View>
-            <PrimaryButton label="Play next" onPress={() => setScreen('themes')} />
+            <PrimaryButton icon="▶️" label="Play next" onPress={() => setScreen('themes')} />
             {isOppositesTheme ? (
-              <SecondaryButton label="Find the Opposite (optional)" onPress={startOppositeGame} />
+              <SecondaryButton icon="↔️" label="Find the Opposite (optional)" onPress={startOppositeGame} />
             ) : (
-              <SecondaryButton label="Play Memory Pairs (optional)" onPress={startMemoryPairs} />
+              <SecondaryButton icon="🧠" label="Play Memory Pairs (optional)" onPress={startMemoryPairs} />
             )}
-            <SecondaryButton label="See progress" onPress={() => setScreen('progress')} />
+            <SecondaryButton icon="⭐" label="See progress" onPress={() => setScreen('progress')} />
           </ScreenShell>
         )}
 
@@ -1276,7 +1306,11 @@ export default function App() {
                 </View>
               ))}
             </View>
-            <PrimaryButton label={`Review ${activeThemeMeta?.title ?? 'Food'}`} onPress={startLesson} />
+            <PrimaryButton icon="▶️" label={`Review ${activeThemeMeta?.title ?? 'Food'}`} onPress={startLesson} />
+            {/* Deliberately no icon: this wipes all progress and shouldn't look
+                any more inviting to tap than plain text already does. See
+                STATUS.md - flagged separately as worth gating/hiding, not
+                fixed here since that's a different decision than icon design. */}
             <SecondaryButton label="Reset prototype" onPress={resetPrototype} />
           </ScreenShell>
         )}
@@ -1289,17 +1323,29 @@ function ScreenShell({ children }: { children: React.ReactNode }) {
   return <View style={styles.screenShell}>{children}</View>;
 }
 
-function PrimaryButton({ label, onPress }: { label: string; onPress: () => void }) {
+// `icon` is a small emoji glyph shown before the label so a non-reading
+// child has a non-text cue for "what does this button do" during a shared
+// session, per PRODUCT.md's bar for anything the child taps directly (see
+// STATUS.md's "Less English text" audit). It's optional and omitted for
+// buttons that should stay plain, undecorated text on purpose — e.g. the
+// "Reset prototype" debug button, which shouldn't look any more inviting
+// to tap than it already does.
+// accessibilityLabel is set explicitly to the plain label: React Native
+// treats a Pressable with accessibilityLabel as one accessible node, so
+// the decorative icon Text isn't separately announced by a screen reader.
+function PrimaryButton({ label, icon, onPress }: { label: string; icon?: string; onPress: () => void }) {
   return (
-    <Pressable style={styles.primaryButton} onPress={onPress} accessibilityRole="button">
+    <Pressable style={styles.primaryButton} onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
+      {icon ? <Text style={styles.buttonIcon}>{icon}</Text> : null}
       <Text style={styles.primaryButtonText}>{label}</Text>
     </Pressable>
   );
 }
 
-function SecondaryButton({ label, onPress }: { label: string; onPress: () => void }) {
+function SecondaryButton({ label, icon, onPress }: { label: string; icon?: string; onPress: () => void }) {
   return (
-    <Pressable style={styles.secondaryButton} onPress={onPress} accessibilityRole="button">
+    <Pressable style={styles.secondaryButton} onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
+      {icon ? <Text style={styles.buttonIcon}>{icon}</Text> : null}
       <Text style={styles.secondaryButtonText}>{label}</Text>
     </Pressable>
   );
@@ -1448,14 +1494,18 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   topLink: {
+    alignItems: 'center',
     backgroundColor: '#F7F1DF',
     borderColor: '#E4D4A5',
     borderRadius: 14,
     borderWidth: 1,
+    flexDirection: 'row',
+    gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
   topLinkText: { color: '#24324C', fontSize: 14, fontWeight: '700' },
+  topLinkIcon: { fontSize: 14 },
   brandSmall: { color: '#596270', fontSize: 14, fontWeight: '800' },
   screenShell: { gap: 16, padding: 20 },
   heroRow: { alignItems: 'center', flexDirection: 'row', gap: 18 },
@@ -1532,6 +1582,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#B9780D',
     borderRadius: 16,
     minHeight: 54,
+    flexDirection: 'row',
+    gap: 8,
     justifyContent: 'center',
     paddingHorizontal: 18,
     paddingVertical: 14,
@@ -1544,11 +1596,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     minHeight: 52,
+    flexDirection: 'row',
+    gap: 8,
     justifyContent: 'center',
     paddingHorizontal: 18,
     paddingVertical: 13,
   },
   secondaryButtonText: { color: '#24324C', fontSize: 16, fontWeight: '800' },
+  // Shared by PrimaryButton/SecondaryButton's optional icon. Emoji glyphs
+  // render in their own full color regardless of a Text `color` style, so
+  // this only needs to size them, not tint them.
+  buttonIcon: { fontSize: 18 },
   statsRow: { flexDirection: 'row', gap: 12 },
   statCard: {
     backgroundColor: '#EFF7F0',

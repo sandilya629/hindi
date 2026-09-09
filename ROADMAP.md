@@ -91,10 +91,17 @@ the reasoning isn't lost if it comes up again.
     directly during a shared session (Continue, Play next, See progress,
     the optional Find-the-Opposite/Memory-Pairs buttons) are plain English
     labels with only Primary/Secondary color-and-size for a non-text cue —
-    no icon, no spoken cue, unlike the in-lesson screens. Worth doing, but
-    it's a real (small) design decision — which icon per button, whether
-    to voice them — not a mechanical fix, so left for a decision rather
-    than guessed at. See `STATUS.md` for the full audit.
+    no icon, no spoken cue, unlike the in-lesson screens. **Done:** every
+    post-setup navigation button (top-bar Home/Progress, Home screen,
+    Lesson preview, Reward, Progress) now carries a small consistent emoji
+    icon — the same icon always means the same destination (🏠 Home,
+    ⭐ Progress, 🗺️ the themes map, ▶️ play/continue/replay, 🧠 Memory
+    Pairs, ↔️ Find the Opposite) — plus one spoken cue, on the Reward
+    screen only (see `STATUS.md` for why only that screen). Verified by
+    scripting an actual browser through onboarding → home → themes →
+    lesson → match → reward → progress and screenshotting each step; no
+    console errors, no layout breakage. See `STATUS.md` for the full
+    design writeup.
   - **Non-punitive wrong-answer feedback — audited, loudness fixed, tone
     still open.** Turned out not to be "likely already fine": measuring the
     actual waveform (see `STATUS.md`) confirmed the bundled `fail-buzz.mp3`
