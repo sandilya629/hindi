@@ -50,11 +50,12 @@ the reasoning isn't lost if it comes up again.
   analysis above as low-risk, no-architecture-change ideas — additive to
   `App.tsx` as it exists today, meant to be tried and evaluated against
   real usage before going further, not committed to as a package:
-  - **Tablet touch-safety lock.** Disable pinch-zoom, pull-to-refresh, and
-    text-selection callouts (`touch-action: none` at the root) and lock
-    orientation to landscape. Toddlers rest palms on screens and
-    pinch/scroll by accident — pure friction removal, a few lines in the
-    root layout/viewport config.
+  - **Tablet touch-safety lock — done (web), pending live-device check.**
+    Pinch-zoom, pull-to-refresh, and text-selection callouts disabled via a
+    custom `public/index.html` (see `STATUS.md`). Landscape orientation
+    lock, also proposed in the source analysis, was deliberately **not**
+    done — it would reverse `DESIGN.md`'s explicit "portrait mobile first"
+    call, so it's a separate decision, not a touch-safety fix.
   - **Warmer palette pass.** The analysis (working only from a live
     screenshot, not `DESIGN.md`) flagged the current theme as reading
     "monotone brown/navy" and suggested warmer saffron/mango/sky-blue/mint

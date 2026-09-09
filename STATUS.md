@@ -157,6 +157,49 @@ before advancing; only replay-as-confirmation when nothing is already
 playing. Verified in the browser by forcing `speechSynthesis.speaking` to
 `true` and confirming no interrupting `cancel()`/`speak()` pair fires.
 
+## Web touch-safety (toddler UX polish, in progress)
+
+`public/index.html` overrides Expo's default web export template (Expo
+resolves `public/index.html` before falling back to its own — confirmed
+against the installed SDK 57 `@expo/cli` source, since `docs.expo.dev` is
+unreachable from this environment's network policy). It adds, on top of
+the stock `react-native-web` reset:
+- A locked viewport meta (`maximum-scale=1, user-scalable=no`) plus
+  `touch-action: pan-y` on `html`/`body` — kills pinch-zoom and
+  double-tap-zoom while deliberately keeping vertical panning, because the
+  app has real `ScrollView`s (Themes path, Progress list); `touch-action:
+  none` (as literally suggested in the source analysis this came from)
+  would have silently broken scrolling there.
+- `overscroll-behavior: none` to kill pull-to-refresh/rubber-band
+  overscroll, and `-webkit-touch-callout`/`user-select: none` to kill the
+  long-press text-selection callout — a toddler resting palms on a tablet
+  triggers all three by accident.
+- `position: fixed` on `body` as an extra guard against iOS bounce-scroll,
+  consistent with the existing reset's `body { overflow: hidden }`.
+
+This only affects the web export (`public/index.html` has no native
+equivalent — iOS/Android don't have browser chrome to fight). Verified by
+running a real `npx expo export --platform web` and confirming the custom
+template's placeholders (`%LANG_ISO_CODE%`/`%WEB_TITLE%`) and `</head>`/
+`</body>` injection points still get filled in correctly by Expo's
+pipeline; not yet verified live in a browser against actual tablet
+touch/pinch input — do that before calling this item done.
+
+**Landscape orientation lock was in the same source recommendation but was
+deliberately NOT done here** — `app.json`'s `orientation` is `"portrait"`
+and `DESIGN.md` explicitly says "Design for portrait mobile first." Locking
+to landscape would reverse an established design decision, not just add a
+touch-safety fix; flagged for a separate decision rather than folded in
+silently.
+
+**Also surfaced in passing, worth a look before closing out the
+"non-punitive wrong-answer feedback" roadmap item:** there is an active
+`fail-buzz.mp3` played on wrong answers (`failPlayer` in `App.tsx`). That
+roadmap item guessed this was "likely already mostly true" given the
+speech-clipping fixes already made — a literal buzz sound suggests it's
+worth actually listening to before assuming it's fine; `PRODUCT.md`'s
+anti-references explicitly rule out "punitive mistake states."
+
 ## Deployment
 
 - GitHub: `sandilya629/hindi`, branch `main`.
