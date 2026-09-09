@@ -131,9 +131,11 @@ otherwise.**
 
 ## Audio
 
-`speakWord(text, language, onDone)` wraps `expo-speech`. Current constants
-(tuned down three times now after tester feedback that speech was too fast/
-clipped — don't re-raise these without a specific reason):
+`speakWord(text, language, onDone)` wraps `expo-speech`, for target-
+language (Hindi/Tamil) vocabulary only. Current constants (tuned down
+three times after tester feedback that speech was too fast/clipped —
+don't re-raise these without a specific reason; direct feedback since
+confirms these are fine as-is, see below):
 - `SPEECH_RATE = 0.32` (normal words)
 - `SOUND_SPEECH_RATE = 0.22` (single-character Starter-sounds letters —
   stretched out further since one syllable at normal rate is too short to
@@ -144,6 +146,22 @@ clipped — don't re-raise these without a specific reason):
   if you slow speech down further — it must stay longer than the slowest
   real utterance takes to play, or the app will advance while audio is still
   playing.
+
+**Don't conflate `SPEECH_RATE` with UI-prompt speech — this was a real bug,
+now fixed.** `speakUIPrompt` (the Reward screen's "Great job!" line, English,
+not vocabulary) originally reused `SPEECH_RATE`. That rate is tuned for a
+toddler hearing one new *foreign* word slowly and clearly; applying the same
+crawl to a full *English* sentence read as unnaturally slow and stilted, not
+warm. Direct feedback ("really slow... need to be normal conversational
+pace") confirmed this on both mobile and laptop — which also ruled out an
+initially-plausible theory that different devices pick different default
+TTS voices with different baseline paces for the same `rate` multiplier
+(genuinely worth checking first, since `speakWord`/`speakUIPrompt` never
+pin an explicit `voice`, only a `language` code — but the per-word vocabulary
+audio was confirmed fine everywhere, narrowing it to this one code path).
+Fixed with a separate `UI_PROMPT_SPEECH_RATE = 0.95` constant (near-natural
+pace, not the toddler-vocabulary crawl) — `SPEECH_RATE`/`SOUND_SPEECH_RATE`
+were not touched.
 
 **Lesson learned, don't reintroduce this bug — this note originally
 claimed the bug below was fixed; it wasn't, only half of it was.**
