@@ -449,9 +449,9 @@ removes the one line in the entire touch-safety change that has this
 documented failure mode, on an actual field report that matches the
 documented symptom precisely, and `overscroll-behavior: none` (kept)
 already covers the original intent — preventing rubber-band overscroll —
-via a modern, well-supported property with no such risk. **Ask for
-confirmation on a real phone once this is deployed**, since it couldn't be
-verified end-to-end here.
+via a modern, well-supported property with no such risk. **Confirmed
+fixed on an actual phone** — the top bar is reachable and the page no
+longer loads pre-scrolled.
 
 **Landscape orientation lock was in the same source recommendation but was
 deliberately NOT done here** — `app.json`'s `orientation` is `"portrait"`
