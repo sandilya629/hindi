@@ -28,7 +28,11 @@ the reasoning isn't lost if it comes up again.
   [`hindi-words-for-review.csv`](hindi-words-for-review.csv) list every
   word in the app, grouped by theme, with a blank column for corrections —
   handed to a native Tamil speaker for review. Corrections come back into
-  the actual content arrays in `App.tsx` once received.
+  the actual content arrays in `App.tsx` once received. Underway now,
+  running alongside the toddler UX polish below: gameplay/UX verification
+  is being done primarily in the Hindi build, while this word-content
+  review covers Tamil — the two tracks are independent and neither blocks
+  the other.
 
 ## Next up (discussed, not started)
 
@@ -70,10 +74,14 @@ the reasoning isn't lost if it comes up again.
     given the audio-clipping fixes already made — a verification pass,
     not necessarily new code.
 
-  Sequencing: these sit behind Tamil verification in priority, and are
-  meant to be tried in the existing web build with a few families before
-  any larger direction (new interaction templates, dual-track, rebrand)
-  is considered.
+  Sequencing: these are being worked in parallel with Tamil verification,
+  not behind it — playtesting/verification of these changes happens
+  primarily in the Hindi build, but every change here lands in the shared
+  `App.tsx` UI/interaction layer, not language-specific content, so Tamil
+  gets each change for free and must stay at parity: no Hindi-only
+  implementation of any item in this list. Tried in the existing web build
+  with a few families before any larger direction (new interaction
+  templates, dual-track, rebrand) is considered.
 
 ## Launch / wider audience
 
