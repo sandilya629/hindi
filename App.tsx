@@ -27,6 +27,18 @@ const SPEECH_RATE = 0.32;
 // Single letters/sounds get an even slower rate so the one utterance is
 // stretched out and easy to sound along with, instead of being repeated.
 const SOUND_SPEECH_RATE = 0.22;
+// speakUIPrompt's rate (English sentences, not target-language vocabulary
+// words) - deliberately its own constant, not SPEECH_RATE. Reusing
+// SPEECH_RATE here was a real bug: that rate is tuned for a toddler
+// hearing one new foreign word slowly and clearly, and applying the same
+// crawl to a full English sentence ("Great job! Want to play more, or see
+// your progress?") reads as unnaturally slow and stilted rather than
+// warm - confirmed by direct feedback ("really slow... need to be normal
+// conversational pace") on both mobile and laptop, which also ruled out a
+// per-device voice/rate mismatch as the cause (see git history on this
+// line for that ruled-out theory). ~1.0 is a voice's own natural pace;
+// kept just under it for a touch of warmth without dragging.
+const UI_PROMPT_SPEECH_RATE = 0.95;
 // Themes with more than this many words (Numbers, Starter sounds have 10)
 // still only show this many answer tiles per question — a toddler scanning
 // a wall of tiles for the right one loses more than they gain from extra
@@ -69,7 +81,7 @@ function speakWord(text: string, language: LanguageId, onDone?: () => void) {
 // effect below for why only that one screen gets a spoken cue.
 function speakUIPrompt(text: string) {
   Speech.stop();
-  Speech.speak(text, { language: 'en-US', rate: SPEECH_RATE });
+  Speech.speak(text, { language: 'en-US', rate: UI_PROMPT_SPEECH_RATE });
 }
 
 // Polls Speech.isSpeakingAsync() until it goes false (or maxWaitMs elapses,
