@@ -102,6 +102,18 @@ the reasoning isn't lost if it comes up again.
     lesson → match → reward → progress and screenshotting each step; no
     console errors, no layout breakage. See `STATUS.md` for the full
     design writeup.
+  - **"Erase all progress" gating — fixed; whether it should exist at all
+    is still open.** Found while excluding it from the icon system above:
+    it was a single ungated tap that wiped both languages' entire progress
+    with no confirmation, no undo, and no cloud backup — reachable by a
+    child, since Progress is one of two links every screen's top bar
+    exposes. Now requires an explicit second tap on a clearly-worded,
+    visually distinct (berry-red) confirm button; `Cancel` returns to the
+    plain trigger untouched. Verified end-to-end with a scripted browser,
+    not just typed. Still open: `STATUS.md`'s own testing section already
+    documents a dev-only way to reset state (seed `localStorage` directly)
+    that needs no in-app button — worth deciding whether this control
+    belongs in production at all, not assumed here.
   - **Non-punitive wrong-answer feedback — audited, loudness fixed, tone
     still open.** Turned out not to be "likely already fine": measuring the
     actual waveform (see `STATUS.md`) confirmed the bundled `fail-buzz.mp3`

@@ -258,12 +258,63 @@ different icon per screen for the same action:
 - **Deliberately no icon:** `Reset prototype` on the Progress screen. It
   wipes all progress — it should look less inviting to tap than the rest,
   not more, so it was left out of the icon system on purpose rather than
-  overlooked. Separately worth flagging (not fixed here, different
-  question than icon design): this button is a dev/debug leftover with no
-  gate in front of it, live in the same production build a toddler plays —
-  worth deciding whether to remove it, gate it behind the same kind of
-  parent-check the outside BoloBee analysis called a "Parent Gate," or at
-  minimum move it off the child-facing Progress screen.
+  overlooked.
+
+## "Erase all progress" gating (fixed)
+
+Follow-up to the icon-design flag above. `resetPrototype()` was a single,
+ungated tap with zero confirmation — `setProgress(initialProgress)` wipes
+the shared progress map for *both* Hindi and Tamil (see the Architecture
+section's note that both languages share one `Progress` map in
+AsyncStorage), with no undo and no cloud backup (client-side storage only,
+per the Deployment/Architecture sections). Progress is one of only two
+links every screen's top bar exposes, so a child exploring the app could
+reach it and permanently erase everything with one accidental tap. This
+was a real safety gap, not a style question, so it got fixed rather than
+just flagged further:
+
+- Relabeled the trigger from `Reset prototype` (dev jargon, doesn't say
+  what it does) to `Erase all progress`.
+- Tapping it no longer calls `resetPrototype()` directly — it sets a new
+  `confirmingReset` state, which swaps the button for a warning panel:
+  "Erase all progress for both Hindi and Tamil? This can't be undone,"
+  a `Cancel` button (returns to the plain trigger, touches nothing), and a
+  second, explicitly-worded `Yes, erase everything` button that's the only
+  one that actually calls `resetPrototype()`.
+- That confirm button uses a new `destructiveButton` style filled with
+  `#D5565D` — the exact sRGB conversion of `DESIGN.md`'s already-documented
+  `--color-berry` token (`oklch(0.620 0.160 20)`), computed the same way as
+  the palette audit above. That token existed in the design system but was
+  unused anywhere in the app until now; this is its first real use,
+  reserved for the one genuinely irreversible action in the whole UI so it
+  reads as visually distinct from every other (safe, reversible)
+  navigation button.
+- Considered `Alert.alert()` (React Native's built-in confirm dialog)
+  first and rejected it: `react-native-web`'s implementation is a no-op
+  stub (`static alert() {}`, confirmed by reading the installed package
+  source) — on this app's actual deployment target, calling it would
+  silently do nothing at all, not even show a dialog. A native
+  `window.confirm()` fallback would work but renders as a jarring default
+  browser popup, inconsistent with the app's own visual language. Built a
+  small in-app confirmation panel instead, using existing components.
+
+**Verified end-to-end** with a scripted browser (not just `tsc`): typed
+"Erase all progress," confirmed the warning panel text and berry-red
+button render; tapped `Cancel` and confirmed the trigger button reappears
+untouched (progress unchanged); then tapped through to `Yes, erase
+everything` and confirmed it actually lands back on the onboarding screen
+reset to defaults. `npx tsc --noEmit` clean.
+
+**Still open, a real decision rather than a mechanical fix:** should this
+control exist in production at all? `STATUS.md`'s own testing methodology
+section already documents a dev-only way to reset state (seed
+`localStorage`'s `hindi-quest-progress` key directly, then reload) that
+needs no in-app button. That makes the in-app control read as a leftover
+prototyping convenience rather than a feature real families asked for.
+The fix above closes the *safety* gap (no more one-tap accidental wipe)
+regardless of that answer, but removing it from the child-facing Progress
+screen entirely — or moving it somewhere a parent would look but a child
+exploring wouldn't — is worth deciding, not assumed here.
 
 **Voice:** added `speakUIPrompt()`, distinct from `speakWord()` — it
 always speaks English (`en-US`) since these are UI phrases, not target-

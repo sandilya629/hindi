@@ -605,6 +605,13 @@ export default function App() {
   const [oppositeAnswerOrder, setOppositeAnswerOrder] = useState<LessonItem[]>([]);
   const [oppositeSelectedAnswer, setOppositeSelectedAnswer] = useState<string | null>(null);
   const [oppositeFeedback, setOppositeFeedback] = useState('Find the opposite.');
+  // Guards the "erase all progress" action on the Progress screen: was a
+  // single, ungated tap with no confirmation - a child exploring the app
+  // (Progress is one of only two links every screen exposes, via the top
+  // bar) could permanently wipe both languages' learning history with one
+  // accidental tap, with no undo and no cloud backup (AsyncStorage only).
+  // See STATUS.md.
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   const themeItems = itemsForTheme(activeTheme, language);
   const activeThemeMeta = themes.find((theme) => theme.id === activeTheme);
@@ -917,6 +924,7 @@ export default function App() {
   }
 
   function resetPrototype() {
+    setConfirmingReset(false);
     setProgress(initialProgress);
     setMatchIndex(0);
     setAttempts({});
@@ -1307,11 +1315,31 @@ export default function App() {
               ))}
             </View>
             <PrimaryButton icon="▶️" label={`Review ${activeThemeMeta?.title ?? 'Food'}`} onPress={startLesson} />
-            {/* Deliberately no icon: this wipes all progress and shouldn't look
-                any more inviting to tap than plain text already does. See
-                STATUS.md - flagged separately as worth gating/hiding, not
-                fixed here since that's a different decision than icon design. */}
-            <SecondaryButton label="Reset prototype" onPress={resetPrototype} />
+            {/* Erases every learned word for both Hindi and Tamil, with no
+                undo and no cloud backup (AsyncStorage only) - see STATUS.md.
+                Deliberately no icon on the trigger: this shouldn't look any
+                more inviting to tap than plain text already does. Requires
+                a second, explicitly-worded tap on a visually distinct
+                (berry-red) confirm button before anything happens - a
+                single accidental tap can no longer wipe progress. */}
+            {confirmingReset ? (
+              <View style={styles.resetConfirmPanel}>
+                <Text style={styles.resetConfirmText}>
+                  Erase all progress for both Hindi and Tamil? This can't be undone.
+                </Text>
+                <Pressable
+                  style={styles.destructiveButton}
+                  onPress={resetPrototype}
+                  accessibilityRole="button"
+                  accessibilityLabel="Yes, erase everything"
+                >
+                  <Text style={styles.destructiveButtonText}>Yes, erase everything</Text>
+                </Pressable>
+                <SecondaryButton label="Cancel" onPress={() => setConfirmingReset(false)} />
+              </View>
+            ) : (
+              <SecondaryButton label="Erase all progress" onPress={() => setConfirmingReset(true)} />
+            )}
           </ScreenShell>
         )}
       </ScrollView>
@@ -1607,6 +1635,30 @@ const styles = StyleSheet.create({
   // render in their own full color regardless of a Text `color` style, so
   // this only needs to size them, not tint them.
   buttonIcon: { fontSize: 18 },
+  // "Erase all progress" confirmation (Progress screen). destructiveButton
+  // uses DESIGN.md's documented `--color-berry` token (oklch(0.620 0.160
+  // 20) -> #D5565D) - defined in the design system already but not used
+  // anywhere else in the app until now. Deliberately the only red/berry
+  // fill in the whole UI, reserved for this one irreversible action.
+  resetConfirmPanel: {
+    backgroundColor: '#FFF0EB',
+    borderColor: '#E7755F',
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 10,
+    padding: 16,
+  },
+  resetConfirmText: { color: '#7A2E20', fontSize: 14, fontWeight: '700', lineHeight: 20 },
+  destructiveButton: {
+    alignItems: 'center',
+    backgroundColor: '#D5565D',
+    borderRadius: 16,
+    justifyContent: 'center',
+    minHeight: 52,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+  },
+  destructiveButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '900' },
   statsRow: { flexDirection: 'row', gap: 12 },
   statCard: {
     backgroundColor: '#EFF7F0',
