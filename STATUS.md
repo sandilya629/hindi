@@ -194,6 +194,51 @@ brand decision, not fix a defect it never actually measured — it was
 written off a live screenshot, without access to the design rationale.
 No `App.tsx` colors were changed.
 
+## "Less English text" audit (checked, mostly no change; one gap found)
+
+The roadmap item's framing — "lean further on icons, color, and voice
+prompts so a non-reading 3-5 year old can navigate unassisted" — assumes
+a fully independent, non-reading child navigating the whole app alone.
+Checked against `PRODUCT.md` before touching anything, because that's not
+this app's model: **"Hindi Quest is built first for a toddler... with a
+parent driving the screen alongside them — not a kid navigating
+independently. That distinction shapes real design decisions:
+instructional text can stay in full English prose (the parent reads it,
+not the child), but anything the child is meant to parse — game state,
+correctness, how many choices are on screen at once — has to work through
+position, color, size, and sound, not reading."**
+
+Checked each named example and the actual bar `PRODUCT.md` sets, against
+the real screens in `App.tsx`:
+
+- **"Choose your language," "Show pronunciation help"** — both live on the
+  setup screen, operated once by the parent before the child ever touches
+  the tablet (`languageMeta`/`adultSupport` toggles). This is precisely the
+  "parent reads it, not the child" case `PRODUCT.md` describes on purpose
+  — Design Principle 4 even names pronunciation help as adult-only support,
+  "not a separate mode." Changing this would work against a documented
+  decision, not fix a violation of it. Not done.
+- **In-lesson mechanics** (the part `PRODUCT.md` actually requires to be
+  non-text) — already audio-led and icon/color-driven: the prompt word is
+  spoken (`speakWord`), answer tiles are icon/emoji-first, and correctness
+  is shown via tile state, not a text verdict the child must read. The
+  Themes screen already replaced "Master X to unlock" prose with a
+  position/size/icon-only path for exactly this reason (see the Gameplay
+  flow section above) — this principle is already applied where it
+  actually matters.
+- **The one real gap:** post-lesson navigation — `Continue`, `Play next`,
+  `See progress`, and the optional `Find the Opposite (optional)`/`Play
+  Memory Pairs (optional)` buttons — is where the child *is* likely to tap
+  directly during a shared session (this is squarely "how many choices are
+  on screen... which one to tap next," `PRODUCT.md`'s own bar). Right now
+  these are plain English button labels; the only non-text cue is size and
+  Primary-vs-Secondary color, with no icon and no spoken cue, unlike every
+  in-lesson screen. Worth closing, but it's a real design decision (which
+  icon fits each button, whether the mascot should voice the label) rather
+  than a mechanical fix — not guessed at here; needs a call before doing.
+
+No text or code changed for this item.
+
 ## Web touch-safety (toddler UX polish, in progress)
 
 `public/index.html` overrides Expo's default web export template (Expo

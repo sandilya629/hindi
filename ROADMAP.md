@@ -75,12 +75,26 @@ the reasoning isn't lost if it comes up again.
     component pattern — now documented in `DESIGN.md` under Components so
     it stays a deliberate, single accent rather than drifting further.
     No color values changed.
-  - **Less English text in onboarding/UI chrome.** Where a toggle or label
-    currently requires English reading literacy (e.g. language/
-    pronunciation toggles), lean further on icons, color, and voice
-    prompts so a non-reading 3-5 year old can navigate unassisted.
-    Complements work already done on audio pacing (see `SPEECH_RATE`
-    history in `STATUS.md`).
+  - **Less English text in onboarding/UI chrome — checked, premise mostly
+    doesn't hold; one narrower gap found instead.** The named examples
+    ("Choose your language," "Show pronunciation help") are on the setup
+    screen a parent operates before handing the tablet over — and
+    `PRODUCT.md` explicitly designs for exactly that split: "instructional
+    text can stay in full English prose (the parent reads it, not the
+    child)... not a kid navigating independently." Changing those would
+    work against a documented product decision, not fix a gap; not done.
+    `PRODUCT.md`'s actual bar — "anything the child is meant to parse...
+    has to work through position, color, size, and sound, not reading" —
+    is already met in-lesson (audio-led prompts, icon tiles, and the
+    Themes path's position/icon-only wayfinding, per `STATUS.md`).
+    The one real gap: the post-lesson navigation buttons a child does tap
+    directly during a shared session (Continue, Play next, See progress,
+    the optional Find-the-Opposite/Memory-Pairs buttons) are plain English
+    labels with only Primary/Secondary color-and-size for a non-text cue —
+    no icon, no spoken cue, unlike the in-lesson screens. Worth doing, but
+    it's a real (small) design decision — which icon per button, whether
+    to voice them — not a mechanical fix, so left for a decision rather
+    than guessed at. See `STATUS.md` for the full audit.
   - **Non-punitive wrong-answer feedback — audited, loudness fixed, tone
     still open.** Turned out not to be "likely already fine": measuring the
     actual waveform (see `STATUS.md`) confirmed the bundled `fail-buzz.mp3`
