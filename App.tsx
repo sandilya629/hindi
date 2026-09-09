@@ -75,13 +75,69 @@ function speakWord(text: string, language: LanguageId, onDone?: () => void) {
   });
 }
 
+// Looked up once and cached (undefined = not looked up yet, null = none
+// found) - picks a warmer-sounding English voice for speakUIPrompt when
+// the device actually has one available, instead of whatever the browser/
+// OS defaults to (often a flat, dated "system" voice). Feedback: the
+// default voice reads as "too computer generated," wants "softer, more
+// human, warm and encouraging." A rate/pitch tweak alone can't fix that -
+// it's the underlying synthesized voice itself - so this looks for an
+// actually better one instead of trying to disguise the same one.
+// `quality === Enhanced` is meaningful on iOS/Android (expo-speech reports
+// a real quality flag there); the web platform module always reports
+// `Default` for every voice (confirmed by reading the installed package
+// source), so on web this falls back to a name-keyword heuristic - browser/
+// OS voices with real neural/cloud backing are typically labeled "Natural"
+// or "Online" (e.g. Edge on Windows ships "Microsoft <Name> Online
+// (Natural)" alongside the older robotic desktop ones) or "Neural"/
+// "Enhanced" outright. Falls back to no explicit voice (today's behavior,
+// unchanged) if nothing better is found - this can only improve things,
+// never make voice choice worse.
+let cachedPreferredEnglishVoice: string | null | undefined;
+
+async function getPreferredEnglishVoice(): Promise<string | null> {
+  if (cachedPreferredEnglishVoice !== undefined) return cachedPreferredEnglishVoice;
+  // Timeout guard: expo-speech's web implementation, when the browser's
+  // voice list is empty, waits on `speechSynthesis.onvoiceschanged` and
+  // its promise never resolves at all if that event never fires (true on
+  // a device with zero installed voices - confirmed by reading the
+  // installed package source). Without this, a zero-voice device would
+  // hang here forever and speakUIPrompt would never speak at all - a
+  // regression this lookup must never cause. A timeout result isn't
+  // cached (only a real resolution is), so a later call can still pick up
+  // voices that load in after the timeout - many browsers populate the
+  // list asynchronously shortly after page load, which the timeout must
+  // not permanently give up on.
+  const TIMED_OUT = Symbol('timeout');
+  try {
+    const result = await Promise.race([
+      Speech.getAvailableVoicesAsync(),
+      new Promise<typeof TIMED_OUT>((resolve) => setTimeout(() => resolve(TIMED_OUT), 400)),
+    ]);
+    if (result === TIMED_OUT) return null;
+    const englishVoices = result.filter((voice) => voice.language?.toLowerCase().startsWith('en'));
+    const preferred =
+      englishVoices.find((voice) => voice.quality === Speech.VoiceQuality.Enhanced) ??
+      englishVoices.find((voice) => /natural|online|neural|enhanced/i.test(voice.name));
+    cachedPreferredEnglishVoice = preferred?.identifier ?? null;
+  } catch {
+    cachedPreferredEnglishVoice = null;
+  }
+  return cachedPreferredEnglishVoice ?? null;
+}
+
 // Distinct from speakWord: this speaks short English navigation phrases
 // (not target-language vocabulary), so it always uses en-US regardless of
 // the lesson language. Used sparingly - see the `screen === 'reward'`
 // effect below for why only that one screen gets a spoken cue.
-function speakUIPrompt(text: string) {
+async function speakUIPrompt(text: string) {
   Speech.stop();
-  Speech.speak(text, { language: 'en-US', rate: UI_PROMPT_SPEECH_RATE });
+  const voice = await getPreferredEnglishVoice();
+  Speech.speak(text, {
+    language: 'en-US',
+    rate: UI_PROMPT_SPEECH_RATE,
+    ...(voice ? { voice } : {}),
+  });
 }
 
 // Polls Speech.isSpeakingAsync() until it goes false (or maxWaitMs elapses,
