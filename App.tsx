@@ -180,7 +180,7 @@ function buildAnswerOptions(correctItem: LessonItem, pool: LessonItem[], cap: nu
   return shuffleItems([correctItem, ...distractors]);
 }
 
-type Screen = 'onboarding' | 'home' | 'themes' | 'lesson' | 'match' | 'memory' | 'opposite' | 'reward' | 'progress';
+type Screen = 'onboarding' | 'home' | 'themes' | 'lesson' | 'match' | 'memory' | 'opposite' | 'reward' | 'progress' | 'privacy';
 type ItemStatus = 'new' | 'known' | 'practice';
 type CharacterId = 'mithu' | 'bunny' | 'golu';
 type CharacterMood = 'hello' | 'ready' | 'speak' | 'happy';
@@ -584,6 +584,54 @@ function isThemeMastered(themeId: ThemeId, progress: Progress, language: Languag
   return items.length > 0 && items.every((item) => progress[item.id] === 'known');
 }
 
+// A theme's full word list is still what gates unlocking the next theme
+// (isThemeMastered above, unchanged) - this only shortens how many of a
+// theme's items are asked in one Match-and-Listen sitting. See
+// BoloBee_Product_Audit.md finding CUX-03: themes with 10-12 items were
+// asking every item in a single round, which is a lot for a toddler even
+// with the answer grid capped at ANSWER_OPTIONS_CAP tiles.
+const SUB_LEVEL_MAX_SIZE = 6;
+
+// Splits items into as-even-as-possible groups no larger than maxSize.
+// Every current theme size (5, 6, 10, or 12) divides evenly into groups of
+// 4-6 with this method (10 -> 5+5, 12 -> 6+6); a theme size added later
+// that doesn't divide evenly (e.g. 7 -> 4+3) could produce a group smaller
+// than 4 - fine as a graceful fallback, but worth a sanity check if a new
+// theme's item count isn't a multiple of 5 or 6.
+function chunkIntoSubLevels<T>(items: T[], maxSize: number): T[][] {
+  if (items.length <= maxSize) return [items];
+  const levelCount = Math.ceil(items.length / maxSize);
+  const baseSize = Math.floor(items.length / levelCount);
+  const remainder = items.length % levelCount;
+  const levels: T[][] = [];
+  let cursor = 0;
+  for (let i = 0; i < levelCount; i += 1) {
+    const size = baseSize + (i < remainder ? 1 : 0);
+    levels.push(items.slice(cursor, cursor + size));
+    cursor += size;
+  }
+  return levels;
+}
+
+type SubLevel = { items: LessonItem[]; index: number; total: number };
+
+// The sub-level a player is currently on within a theme: the first group
+// that isn't fully known yet, or the last group once everything is. Purely
+// derived from progress - no separate "which sub-level" state to keep in
+// sync, so this can be recomputed anywhere (lesson preview, starting a
+// round, the reward screen) and always reflects the latest progress.
+function currentSubLevel(themeId: ThemeId, progress: Progress, language: LanguageId): SubLevel {
+  const levels = chunkIntoSubLevels(itemsForTheme(themeId, language), SUB_LEVEL_MAX_SIZE);
+  const total = levels.length;
+  for (let i = 0; i < levels.length; i += 1) {
+    if (!levels[i].every((item) => progress[item.id] === 'known')) {
+      return { items: levels[i], index: i, total };
+    }
+  }
+  const lastIndex = Math.max(levels.length - 1, 0);
+  return { items: levels[lastIndex] ?? [], index: lastIndex, total };
+}
+
 type ThemePlayability = 'ready' | 'locked' | 'soon';
 
 function themePlayability(theme: Theme, progress: Progress, language: LanguageId): ThemePlayability {
@@ -680,6 +728,19 @@ export default function App() {
   const [matchIndex, setMatchIndex] = useState(0);
   const [attempts, setAttempts] = useState<Record<string, number>>({});
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  // Locks the answer tiles once a correct tap is registered, until the next
+  // question is actually on screen. Without this, a toddler's repeated taps
+  // during the reaction-pause/speech-replay delay each re-run handleAnswer
+  // from scratch (own advanceToNext timer, own progress write, own success
+  // sound) — see BoloBee_Product_Audit.md finding CUX-02. Deliberately does
+  // NOT lock on a wrong answer: retrying a different tile right away is the
+  // intended "Try again" flow and must keep working exactly as before.
+  const [answerLocked, setAnswerLocked] = useState(false);
+  // How many items the round that just finished actually asked - captured
+  // at startLesson() time so the Reward screen can report an accurate
+  // count now that a round is a sub-level slice, not always the whole
+  // theme (see currentSubLevel above).
+  const [roundSize, setRoundSize] = useState(0);
   const [feedback, setFeedback] = useState('Tap what you hear.');
   const [matchedCards, setMatchedCards] = useState<string[]>([]);
   const [flippedCards, setFlippedCards] = useState<MemoryCard[]>([]);
@@ -704,6 +765,8 @@ export default function App() {
   const [oppositePromptOrder, setOppositePromptOrder] = useState<LessonItem[]>([]);
   const [oppositeAnswerOrder, setOppositeAnswerOrder] = useState<LessonItem[]>([]);
   const [oppositeSelectedAnswer, setOppositeSelectedAnswer] = useState<string | null>(null);
+  // Same repeated-tap lock as answerLocked above, for Find the Opposite.
+  const [oppositeAnswerLocked, setOppositeAnswerLocked] = useState(false);
   const [oppositeFeedback, setOppositeFeedback] = useState('Find the opposite.');
   // Guards the "erase all progress" action on the Progress screen: was a
   // single, ungated tap with no confirmation - a child exploring the app
@@ -712,8 +775,18 @@ export default function App() {
   // accidental tap, with no undo and no cloud backup (AsyncStorage only).
   // See STATUS.md.
   const [confirmingReset, setConfirmingReset] = useState(false);
+  // Which screen "Back" on the privacy page should return to - it's linked
+  // from both onboarding (a parent reading it before ever starting) and
+  // Progress (the app's other adult-facing screen), so a single fixed
+  // return target would be wrong for one of the two entry points.
+  const [privacyReturnScreen, setPrivacyReturnScreen] = useState<Screen>('onboarding');
 
   const themeItems = itemsForTheme(activeTheme, language);
+  // The 4-6 item slice of themeItems the player is actually on right now -
+  // see currentSubLevel's comment above. Used for the lesson preview and to
+  // seed a new round; buildAnswerOptions' distractor pool still draws from
+  // the full themeItems (unrelated to how many questions a round asks).
+  const activeSubLevel = currentSubLevel(activeTheme, progress, language);
   const activeThemeMeta = themes.find((theme) => theme.id === activeTheme);
   const characterMeta = characters.find((entry) => entry.id === character) ?? characters[0];
   const languageMeta = languages.find((entry) => entry.id === language) ?? languages[0];
@@ -845,15 +918,30 @@ export default function App() {
     AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, language);
   }, [language, isLanguageLoaded]);
 
-  function startLesson() {
+  // fullReview: true asks every item in the theme (used by the Progress
+  // screen's "Review <Theme>" button, which means "let me go back over
+  // everything I've learned here") rather than just the current sub-level
+  // (used by the normal "Play" entry point from the lesson preview).
+  function startLesson(options?: { fullReview?: boolean }) {
     setMatchIndex(0);
     setAttempts({});
     setSelectedAnswer(null);
+    setAnswerLocked(false);
     setFeedback('Tap what you hear.');
     setMissedThisLesson([]);
     setIsReviewRound(false);
     setJustMasteredTheme(null);
-    const order = shuffleItems(themeItems);
+    // Only this sub-level's items are asked this round, not the whole
+    // theme - see currentSubLevel/SUB_LEVEL_MAX_SIZE above. Distractor
+    // tiles still draw from the full theme (themeItems) so answer options
+    // aren't artificially limited to just this sub-level's words. Named
+    // roundSourceItems (not roundItems) to avoid shadowing the roundItems
+    // state below, which stores the shuffled order for the Reward
+    // screen's recap - see roundItems' declaration for why that has to be
+    // its own stable snapshot rather than read off promptOrder later.
+    const roundSourceItems = options?.fullReview ? themeItems : activeSubLevel.items;
+    setRoundSize(roundSourceItems.length);
+    const order = shuffleItems(roundSourceItems);
     setPromptOrder(order);
     setRoundItems(order);
     setAnswerOrder(buildAnswerOptions(order[0], themeItems, ANSWER_OPTIONS_CAP));
@@ -861,6 +949,10 @@ export default function App() {
   }
 
   function handleAnswer(itemId: string) {
+    // Ignore further taps once a correct answer is already locked in and
+    // waiting to advance — see answerLocked's declaration above.
+    if (answerLocked) return;
+
     const isCorrect = itemId === currentItem.id;
     const nextAttempts = { ...attempts, [currentItem.id]: (attempts[currentItem.id] ?? 0) + 1 };
     setAttempts(nextAttempts);
@@ -874,6 +966,7 @@ export default function App() {
       return;
     }
 
+    setAnswerLocked(true);
     playSuccessSound();
     setFeedback(`Nice! ${currentItem.word} means ${currentItem.meaning}.`);
     const nextProgress = { ...progress, [currentItem.id]: 'known' as ItemStatus };
@@ -890,6 +983,11 @@ export default function App() {
       if (advanced) return;
       advanced = true;
       setTimeout(() => {
+        // Unlock right as we actually advance, regardless of which branch
+        // below fires — the next question, review round, or reward screen
+        // is about to render, so fresh taps are safe to accept again.
+        setAnswerLocked(false);
+
         if (matchIndex < promptOrder.length - 1) {
           setMatchIndex((index) => index + 1);
           setAnswerOrder(buildAnswerOptions(promptOrder[matchIndex + 1], themeItems, ANSWER_OPTIONS_CAP));
@@ -942,6 +1040,7 @@ export default function App() {
   function startOppositeGame() {
     setOppositeIndex(0);
     setOppositeSelectedAnswer(null);
+    setOppositeAnswerLocked(false);
     setOppositeFeedback('Find the opposite.');
     const order = shuffleItems(themeItems);
     setOppositePromptOrder(order);
@@ -951,6 +1050,10 @@ export default function App() {
   }
 
   function handleOppositeAnswer(itemId: string) {
+    // Same repeated-tap guard as handleAnswer above — ignore taps while a
+    // correct answer is already locked in and waiting to advance.
+    if (oppositeAnswerLocked) return;
+
     const correctItem = themeItems.find((item) => item.id === currentOppositeItem.oppositeId);
     const isCorrect = itemId === correctItem?.id;
     setOppositeSelectedAnswer(itemId);
@@ -961,6 +1064,7 @@ export default function App() {
       return;
     }
 
+    setOppositeAnswerLocked(true);
     playSuccessSound();
     setOppositeFeedback(correctItem ? `Nice! The opposite of ${currentOppositeItem.word} is ${correctItem.word}.` : 'Nice!');
 
@@ -969,6 +1073,10 @@ export default function App() {
       if (advanced) return;
       advanced = true;
       setTimeout(() => {
+        // Unlock right as we actually advance — see the matching comment
+        // in handleAnswer's advanceToNext above.
+        setOppositeAnswerLocked(false);
+
         if (oppositeIndex < oppositePromptOrder.length - 1) {
           const nextItem = oppositePromptOrder[oppositeIndex + 1];
           const nextCorrect = themeItems.find((item) => item.id === nextItem.oppositeId) ?? nextItem;
@@ -1049,6 +1157,8 @@ export default function App() {
     setMatchedCards([]);
     setFlippedCards([]);
     setSelectedAnswer(null);
+    setAnswerLocked(false);
+    setOppositeAnswerLocked(false);
     setFeedback('Tap what you hear.');
     setMissedThisLesson([]);
     setIsReviewRound(false);
@@ -1147,6 +1257,16 @@ export default function App() {
                 label={languageMeta.ready ? 'Start' : 'Select Hindi to start'}
                 onPress={() => languageMeta.ready && setScreen('home')}
               />
+              <Pressable
+                onPress={() => {
+                  setPrivacyReturnScreen('onboarding');
+                  setScreen('privacy');
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Privacy and data"
+              >
+                <Text style={styles.privacyLink}>Privacy & data</Text>
+              </Pressable>
             </View>
           </ScreenShell>
         )}
@@ -1249,18 +1369,21 @@ export default function App() {
           <ScreenShell>
             <View style={styles.lessonHeader}>
               <View>
-                <Text style={styles.kicker}>{activeThemeMeta?.title ?? 'Food'} Game</Text>
-                <Text style={styles.title}>Learn {themeItems.length} {languageMeta.name} {themeUnitLabel[activeTheme]}</Text>
+                <Text style={styles.kicker}>
+                  {activeThemeMeta?.title ?? 'Food'} Game
+                  {activeSubLevel.total > 1 ? ` · Set ${activeSubLevel.index + 1} of ${activeSubLevel.total}` : ''}
+                </Text>
+                <Text style={styles.title}>Learn {activeSubLevel.items.length} {languageMeta.name} {themeUnitLabel[activeTheme]}</Text>
               </View>
               <CharacterMascot character={character} mood="ready" language={language} compact />
             </View>
             <Text style={styles.subtitle}>Tap one to hear it. Then {characterMeta.name} will quiz you.</Text>
             <View style={styles.wordPreviewGrid}>
-              {themeItems.map((item) => (
+              {activeSubLevel.items.map((item) => (
                 <WordPreview key={item.id} item={item} showPronunciation={adultSupport} onPress={() => speakWord(item.word, item.language)} />
               ))}
             </View>
-            <PrimaryButton icon="▶️" label="Play" onPress={startLesson} />
+            <PrimaryButton icon="▶️" label="Play" onPress={() => startLesson()} />
             <SecondaryButton icon="🗺️" label="Back to themes" onPress={() => setScreen('themes')} />
           </ScreenShell>
         )}
@@ -1295,6 +1418,7 @@ export default function App() {
                   <Pressable
                     key={item.id}
                     onPress={() => handleAnswer(item.id)}
+                    disabled={answerLocked}
                     style={[styles.answerTile, isCorrect && styles.answerCorrect, isWrong && styles.answerWrong]}
                     accessibilityRole="button"
                   >
@@ -1338,6 +1462,7 @@ export default function App() {
                   <Pressable
                     key={item.id}
                     onPress={() => handleOppositeAnswer(item.id)}
+                    disabled={oppositeAnswerLocked}
                     style={[styles.answerTile, isCorrect && styles.answerCorrect, isWrong && styles.answerWrong]}
                     accessibilityRole="button"
                   >
@@ -1388,7 +1513,7 @@ export default function App() {
             <View style={styles.rewardPanel}>
               <CharacterMascot character={character} mood="happy" language={language} />
               <Text style={styles.title}>You learned {languageMeta.name}!</Text>
-              <Text style={styles.subtitle}>{themeItems.length} words practiced. Unlocked: {earnedReward}.</Text>
+              <Text style={styles.subtitle}>{roundSize} words practiced. Unlocked: {earnedReward}.</Text>
               <View style={styles.rewardBasket}>
                 {themeItems.slice(0, 4).map((item) => (
                   <FoodVisual key={item.id} item={item} small />
@@ -1445,7 +1570,7 @@ export default function App() {
                 </View>
               ))}
             </View>
-            <PrimaryButton icon="▶️" label={`Review ${activeThemeMeta?.title ?? 'Food'}`} onPress={startLesson} />
+            <PrimaryButton icon="▶️" label={`Review ${activeThemeMeta?.title ?? 'Food'}`} onPress={() => startLesson({ fullReview: true })} />
             {/* Erases every learned word for both Hindi and Tamil, with no
                 undo and no cloud backup (AsyncStorage only) - see STATUS.md.
                 Deliberately no icon on the trigger: this shouldn't look any
@@ -1471,6 +1596,84 @@ export default function App() {
             ) : (
               <SecondaryButton label="Erase all progress" onPress={() => setConfirmingReset(true)} />
             )}
+            <Pressable
+              onPress={() => {
+                setPrivacyReturnScreen('progress');
+                setScreen('privacy');
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Privacy and data"
+            >
+              <Text style={styles.privacyLink}>Privacy & data</Text>
+            </Pressable>
+          </ScreenShell>
+        )}
+
+        {screen === 'privacy' && (
+          <ScreenShell>
+            <Text style={styles.title}>Privacy & how your data works</Text>
+            <Text style={styles.subtitle}>Plain language, no legal jargon — written for parents.</Text>
+
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>The short version</Text>
+              <Text style={styles.privacyBody}>
+                {languageMeta.name} Quest doesn't collect anything. There's no sign-up, no
+                account, no ads, no analytics, and no server that your child's activity is
+                sent to — because there is no server at all. Everything the app remembers
+                stays on this device, in this browser.
+              </Text>
+            </View>
+
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>What we don't do</Text>
+              <Text style={styles.privacyBody}>• No accounts or sign-in of any kind.</Text>
+              <Text style={styles.privacyBody}>• No ads, and no third-party ad or tracking scripts.</Text>
+              <Text style={styles.privacyBody}>• No analytics — we don't know how many people use the app or how they play.</Text>
+              <Text style={styles.privacyBody}>• No microphone access, ever. The app only speaks words to your child; it never listens.</Text>
+              <Text style={styles.privacyBody}>• No data is sold or shared, because none is collected in the first place.</Text>
+            </View>
+
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>What is saved, and where</Text>
+              <Text style={styles.privacyBody}>
+                Your child's progress (which words are known or still being practiced),
+                the chosen language, and the chosen guide character are saved only in this
+                browser's local storage on this device. None of it is uploaded anywhere.
+              </Text>
+              <Text style={styles.privacyBody}>
+                That also means: clearing your browser's site data, switching devices or
+                browsers, or using a private/incognito window will not carry progress over
+                — there's no account to restore it from, because none exists.
+              </Text>
+            </View>
+
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>How the words are spoken</Text>
+              <Text style={styles.privacyBody}>
+                Words are read aloud using your own device's or browser's built-in
+                text-to-speech — a feature of your phone, tablet, or computer, not
+                something we run. The text is handed to that system voice locally; it
+                doesn't leave your device to reach us or anyone else.
+              </Text>
+            </View>
+
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>Built for young children</Text>
+              <Text style={styles.privacyBody}>
+                This app is designed for toddlers playing alongside a parent. Because no
+                data is collected from anyone who uses it, there's nothing collected from
+                children specifically either — no profiles, no behavioral advertising, no
+                data to sell.
+              </Text>
+            </View>
+
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>Questions or concerns</Text>
+              <Text style={styles.privacyBody}>Reach out any time: sandilyabis@gmail.com</Text>
+              <Text style={styles.privacyMeta}>Last updated: September 2026</Text>
+            </View>
+
+            <SecondaryButton label="Back" onPress={() => setScreen(privacyReturnScreen)} />
           </ScreenShell>
         )}
       </ScrollView>
@@ -1737,6 +1940,15 @@ const styles = StyleSheet.create({
   toggleText: { color: '#24324C', fontSize: 15, fontWeight: '700' },
   helperText: { color: '#596270', fontSize: 14, lineHeight: 20 },
   recapTip: { color: '#7B5B00', fontSize: 15, fontWeight: '800', lineHeight: 21 },
+  privacyLink: {
+    color: '#596270',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
+  privacyBody: { color: '#425063', fontSize: 15, lineHeight: 22 },
+  privacyMeta: { color: '#8892A0', fontSize: 12, fontWeight: '700' },
   primaryButton: {
     alignItems: 'center',
     backgroundColor: '#B9780D',

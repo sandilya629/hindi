@@ -110,12 +110,16 @@ the reasoning isn't lost if it comes up again.
 
 ## Next up (discussed, not started)
 
-- **Sub-levels within larger themes.** Four themes now sit at 10+ items
-  (Opposites, Opposites Two, Starter sounds, Numbers), and asking all of
-  them in one sitting is a lot for a toddler even with the answer grid
-  capped at 6 tiles. Plan: batch each into ~5-6-word levels, broad-first
-  across themes (spiral curriculum) rather than finishing one theme deep
-  before starting the next.
+- **Broad-first curriculum across themes (spiral curriculum).** Splitting
+  each large theme into 4-6-item sub-levels is done (see "BoloBee Product
+  Audit" above) — sub-levels are still played back-to-back within one
+  theme, though, in the same sequential unlock order. The bigger,
+  not-yet-decided idea from the original discussion was to unlock a first
+  sub-level across *several* themes before deepening any one of them
+  (e.g. Food set 1 → Colors set 1 → Opposites set 1 → back to Food set 2),
+  rather than fully mastering one theme before the next ever appears. A
+  real curriculum-sequencing change, not a small follow-on — revisit once
+  there's real usage signal on the simpler within-theme fix.
 - **New themes.** No specific list yet — the two Opposites themes both
   came directly from a kid who played the game asking for them, not from
   a planning session, so the plan is to keep staying open to that channel
@@ -218,9 +222,11 @@ evaluated but not chosen:
   infrastructure; the current Vercel static hosting handles more traffic
   with no changes. Lowest-effort way to test whether "wider" interest is
   real before spending on anything else.
-- **A privacy policy page.** Worth having regardless of distribution
-  choice — the app collects nothing (no accounts, no analytics, no ads),
-  which makes this an easy, honest page to write.
+- **A privacy policy page — done in-app,** see "BoloBee Product Audit"
+  above. What's still open here specifically: a *dedicated, shareable URL*
+  (e.g. for an app-store listing) rather than an in-app screen — needs a
+  router, which the app doesn't have today. Worth revisiting only once
+  there's an actual store listing or external link that needs it.
 - **A custom domain**, instead of the `vercel.app` subdomain, if sharing
   more broadly — mostly a credibility/shareability improvement, not a
   technical necessity.
