@@ -71,10 +71,19 @@ the reasoning isn't lost if it comes up again.
     policy page" under Launch below. See `STATUS.md` for the full writeup,
     including what's deliberately not done yet (a dedicated shareable URL
     — the app has no router today).
-  - **One parent recap / family phrase prompt — not started.** Audit
-    finding PV-02/PED-02: progress is a per-theme Known/New/Practice list
-    today, not a parent-readable "this week your child learned X, try
-    saying Y at home" moment.
+  - **One parent recap / family phrase prompt — done, narrower than the
+    audit's full ask.** Findings PV-02/PED-02 wanted a phrase for every
+    one of the 188 words, hand-authored per item — real content work, and
+    doing that for Tamil specifically would add new unverified-translation
+    risk on top of the vocabulary itself already being flagged (see "What's
+    built" above). Shipped instead: a "For you" panel on the Reward screen
+    listing every word from the round just finished plus one "try it
+    today" phrase, built entirely from data already in the app (word,
+    transliteration, meaning) — no new authored content, works for all 13
+    themes and both languages immediately. The full per-word curated
+    phrase library from the audit is still open if wanted later. See
+    `STATUS.md` for the wording choices (why not "this week," why not a
+    fully natural sentence per word) and review-round verification.
   - **Recorded human audio for the first Hindi pack — not started.** Audit
     finding CUX-06: vocabulary audio is device TTS (`expo-speech`); the
     audit's own recommendation is to record real native-speaker audio for

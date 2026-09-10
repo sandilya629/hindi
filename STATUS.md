@@ -736,6 +736,70 @@ in-product, but if this needs to be linkable from an app-store listing or
 shared standalone later, that's a routing change, not a copy change —
 worth a fresh look at that point rather than guessed at now.
 
+## Parent recap on the Reward screen (added)
+
+Source: `BoloBee_Product_Audit.md`, findings PV-02 and PED-02 ("Add a
+parent recap: 'This week your child recognized water, milk, mango. Try
+saying: Do you want water?'" / "For each MVP word, add one parent-use
+phrase and one 'try this today' prompt"). Fourth item worked from that
+audit, after the repeated-tap lock, theme sub-levels, and privacy page.
+
+**Scope decision, and why:** PED-02's literal ask is a hand-authored
+parent-use phrase for every one of the 188 items across both languages —
+real content-authoring work (effort M in the audit's own table), and
+authoring new phrase content in Tamil specifically would compound the
+already-flagged, unrelated risk that Tamil vocabulary hasn't been
+native-speaker verified yet (see "What's built" above). Implemented
+instead: a **recap grounded in whatever the child actually just
+practiced**, built entirely from data already in the app (`word`,
+`transliteration`, `meaning` — no new translated content, no per-item
+authoring, works identically for all 13 themes and both languages from
+day one). This is a smaller, safer slice of the same finding, not the
+full PED-02 scope — the per-word curated phrase library is still open if
+wanted later.
+
+**What it does:** a new "For you" panel on the Reward screen, separate
+from the celebratory reward panel above it (deliberately — one is for the
+child, this one is for the parent, matching `PRODUCT.md`'s parent/child
+split). Two lines:
+- "Just practiced: `<meaning> (<transliteration>)`, ..." for every word in
+  the round that just finished.
+- "Try it today: say "`<word>`" (`<transliteration>`) — it means
+  "`<meaning>`."" for one of those words.
+
+**How the round's word list is captured:** a new `roundItems` state,
+snapshotted once in `startLesson()` at the same time as `promptOrder`.
+This has to be a *separate* snapshot, not a read of `promptOrder` at
+Reward-render time — `promptOrder` gets overwritten with just the missed
+items when a review round kicks in, so by the time Reward renders it no
+longer reflects the whole round. Verified directly: forced a wrong answer
+on the first question (triggering a review round), then confirmed the
+Reward screen's recap still lists all 6 original Food words, not just
+whichever one got reviewed.
+
+**Wording note:** avoided the audit's own "This week..." framing — the
+app has no per-session date history yet (that's a separate, larger
+feature: PED-03's spaced-review timestamps, still not built, see "Next
+up" in `ROADMAP.md`), so claiming a weekly rollup would overstate what
+this actually is. "Just practiced" is honest about being this session's
+recap. Also avoided trying to auto-generate a naturally-phrased
+conversational sentence per word (the audit's own example, "Do you want
+water?", only reads naturally for a noun like "water" — the same template
+applied to an Opposites theme's "happy" or "big" wouldn't parse as a real
+sentence); "say `<word>` — it means `<meaning>`" is deliberately
+sentence-structure-agnostic so it works for every part of speech across
+all 13 themes without per-word grammar authoring.
+
+The recap word (`recapItem`) is just `roundItems[0]` — since `roundItems`
+is already the shuffled round order, the first item is already
+effectively a random pick with no extra state needed to make it one.
+
+Verified with a scripted browser: recap panel appears on Reward with the
+correct word list and a well-formed "Try it today" line; confirmed
+separately that the list survives a review round unchanged. Screenshotted
+for a visual check — legible, doesn't crowd the existing reward content.
+No console errors. `tsc --noEmit` passes clean.
+
 ## Deployment
 
 - GitHub: `sandilya629/hindi`, branch `main`.
