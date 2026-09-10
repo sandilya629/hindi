@@ -686,6 +686,56 @@ full 10-item round (1/10), not a 5-item one; a single-sub-level theme
 (Food, 6 items) shows no "Set" label and all 6 words, unchanged. No
 console errors in any of these. `tsc --noEmit` passes clean.
 
+## Privacy page (added)
+
+Source: `BoloBee_Product_Audit.md`, finding SAFE-01, rated P0 ("Add a
+parent-visible privacy page"). Third item worked from that audit, after
+the repeated-tap lock (CUX-02) and theme sub-levels (CUX-03).
+
+**The gap:** `README.md` already states the app collects nothing (no
+accounts, no ads, no analytics), but that posture was never stated
+anywhere *inside* the app a parent would actually see before or during
+use — a real trust gap for a child-directed product, independent of
+whether the claim itself was true.
+
+**The fix:** a new `'privacy'` screen, following the app's existing
+screen-based navigation (no router, no new dependency — matches how every
+other screen works). Plain-language content covering exactly what the
+audit asked for: no accounts, no ads, no analytics, no microphone/voice
+recording, where progress is actually stored (`AsyncStorage`, this device
+only, no cloud, no restore-by-account), how the built-in text-to-speech
+works (local, not sent anywhere), a line acknowledging the app is built
+for young children, and a contact address
+(`sandilyabis@gmail.com` — confirmed with the app owner before publishing,
+since a public page is indexable and this is personal information).
+
+Reachable from two places, both parent-facing, deliberately not from the
+top bar every screen shares (that bar is reachable by the child mid-play;
+this isn't part of the child loop, same reasoning `SAFE-05` already
+applied to keeping "Erase all progress" off the universal nav):
+- **Onboarding**, as a small underlined text link below the Start button —
+  visible before a parent ever hands the device to their child.
+- **Progress screen**, alongside "Erase all progress" — the app's other
+  established adult-facing area.
+
+Since the page is reachable from two different places, `privacyReturnScreen`
+(set right before navigating in) tracks which one so the Back button
+returns to the right place rather than a single hardcoded screen.
+
+Verified with a scripted browser: the link is present and shows the
+expected content (including the contact email) from both entry points;
+Back from the onboarding entry returns to onboarding, Back from the
+Progress entry returns to Progress, not the other one. No console errors.
+`tsc --noEmit` passes clean.
+
+**Not done, deliberately out of scope for this pass:** a *dedicated,
+shareable URL* (e.g. `/privacy`) that works outside the app shell — the
+app has no router (see Architecture above), and every route currently
+serves the same static export. Fine for a parent using the app to find it
+in-product, but if this needs to be linkable from an app-store listing or
+shared standalone later, that's a routing change, not a copy change —
+worth a fresh look at that point rather than guessed at now.
+
 ## Deployment
 
 - GitHub: `sandilya629/hindi`, branch `main`.

@@ -57,11 +57,20 @@ the reasoning isn't lost if it comes up again.
     screen's "Review `<Theme>`" button deliberately still reviews the whole
     theme, not just the current sub-level. See `STATUS.md` for the full
     writeup and scripted-browser verification.
-  - **A parent-facing privacy/trust page — not started.** The audit rates
-    this P0 (finding SAFE-01): the app already collects nothing, but that
-    posture isn't stated anywhere a parent can see it. Overlaps with "A
-    privacy policy page" under Launch below; tracked here since the audit
-    treats it as launch-blocking, not optional polish.
+  - **A parent-facing privacy/trust page — done.** The audit's third P0
+    finding (SAFE-01): the app already collected nothing, but that posture
+    was never stated anywhere a parent could see it in-product. A new
+    in-app "Privacy & data" screen (plain language, no legal jargon) now
+    covers exactly what the audit asked for — no accounts, no ads, no
+    analytics, no microphone/voice recording, where progress is actually
+    stored and its limits (this device only, no account to restore from),
+    how the built-in text-to-speech works, and a contact address —
+    reachable from onboarding (before a parent hands the device over) and
+    from the Progress screen, both deliberately kept off the universal top
+    bar the child also uses. Overlaps with, and now supersedes, "A privacy
+    policy page" under Launch below. See `STATUS.md` for the full writeup,
+    including what's deliberately not done yet (a dedicated shareable URL
+    — the app has no router today).
   - **One parent recap / family phrase prompt — not started.** Audit
     finding PV-02/PED-02: progress is a per-theme Known/New/Practice list
     today, not a parent-readable "this week your child learned X, try
@@ -204,9 +213,11 @@ evaluated but not chosen:
   infrastructure; the current Vercel static hosting handles more traffic
   with no changes. Lowest-effort way to test whether "wider" interest is
   real before spending on anything else.
-- **A privacy policy page.** Worth having regardless of distribution
-  choice — the app collects nothing (no accounts, no analytics, no ads),
-  which makes this an easy, honest page to write.
+- **A privacy policy page — done in-app,** see "BoloBee Product Audit"
+  above. What's still open here specifically: a *dedicated, shareable URL*
+  (e.g. for an app-store listing) rather than an in-app screen — needs a
+  router, which the app doesn't have today. Worth revisiting only once
+  there's an actual store listing or external link that needs it.
 - **A custom domain**, instead of the `vercel.app` subdomain, if sharing
   more broadly — mostly a credibility/shareability improvement, not a
   technical necessity.

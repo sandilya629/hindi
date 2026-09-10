@@ -180,7 +180,7 @@ function buildAnswerOptions(correctItem: LessonItem, pool: LessonItem[], cap: nu
   return shuffleItems([correctItem, ...distractors]);
 }
 
-type Screen = 'onboarding' | 'home' | 'themes' | 'lesson' | 'match' | 'memory' | 'opposite' | 'reward' | 'progress';
+type Screen = 'onboarding' | 'home' | 'themes' | 'lesson' | 'match' | 'memory' | 'opposite' | 'reward' | 'progress' | 'privacy';
 type ItemStatus = 'new' | 'known' | 'practice';
 type CharacterId = 'mithu' | 'bunny' | 'golu';
 type CharacterMood = 'hello' | 'ready' | 'speak' | 'happy';
@@ -769,6 +769,11 @@ export default function App() {
   // accidental tap, with no undo and no cloud backup (AsyncStorage only).
   // See STATUS.md.
   const [confirmingReset, setConfirmingReset] = useState(false);
+  // Which screen "Back" on the privacy page should return to - it's linked
+  // from both onboarding (a parent reading it before ever starting) and
+  // Progress (the app's other adult-facing screen), so a single fixed
+  // return target would be wrong for one of the two entry points.
+  const [privacyReturnScreen, setPrivacyReturnScreen] = useState<Screen>('onboarding');
 
   const themeItems = itemsForTheme(activeTheme, language);
   // The 4-6 item slice of themeItems the player is actually on right now -
@@ -1236,6 +1241,16 @@ export default function App() {
                 label={languageMeta.ready ? 'Start' : 'Select Hindi to start'}
                 onPress={() => languageMeta.ready && setScreen('home')}
               />
+              <Pressable
+                onPress={() => {
+                  setPrivacyReturnScreen('onboarding');
+                  setScreen('privacy');
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Privacy and data"
+              >
+                <Text style={styles.privacyLink}>Privacy & data</Text>
+              </Pressable>
             </View>
           </ScreenShell>
         )}
@@ -1552,6 +1567,84 @@ export default function App() {
             ) : (
               <SecondaryButton label="Erase all progress" onPress={() => setConfirmingReset(true)} />
             )}
+            <Pressable
+              onPress={() => {
+                setPrivacyReturnScreen('progress');
+                setScreen('privacy');
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Privacy and data"
+            >
+              <Text style={styles.privacyLink}>Privacy & data</Text>
+            </Pressable>
+          </ScreenShell>
+        )}
+
+        {screen === 'privacy' && (
+          <ScreenShell>
+            <Text style={styles.title}>Privacy & how your data works</Text>
+            <Text style={styles.subtitle}>Plain language, no legal jargon — written for parents.</Text>
+
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>The short version</Text>
+              <Text style={styles.privacyBody}>
+                {languageMeta.name} Quest doesn't collect anything. There's no sign-up, no
+                account, no ads, no analytics, and no server that your child's activity is
+                sent to — because there is no server at all. Everything the app remembers
+                stays on this device, in this browser.
+              </Text>
+            </View>
+
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>What we don't do</Text>
+              <Text style={styles.privacyBody}>• No accounts or sign-in of any kind.</Text>
+              <Text style={styles.privacyBody}>• No ads, and no third-party ad or tracking scripts.</Text>
+              <Text style={styles.privacyBody}>• No analytics — we don't know how many people use the app or how they play.</Text>
+              <Text style={styles.privacyBody}>• No microphone access, ever. The app only speaks words to your child; it never listens.</Text>
+              <Text style={styles.privacyBody}>• No data is sold or shared, because none is collected in the first place.</Text>
+            </View>
+
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>What is saved, and where</Text>
+              <Text style={styles.privacyBody}>
+                Your child's progress (which words are known or still being practiced),
+                the chosen language, and the chosen guide character are saved only in this
+                browser's local storage on this device. None of it is uploaded anywhere.
+              </Text>
+              <Text style={styles.privacyBody}>
+                That also means: clearing your browser's site data, switching devices or
+                browsers, or using a private/incognito window will not carry progress over
+                — there's no account to restore it from, because none exists.
+              </Text>
+            </View>
+
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>How the words are spoken</Text>
+              <Text style={styles.privacyBody}>
+                Words are read aloud using your own device's or browser's built-in
+                text-to-speech — a feature of your phone, tablet, or computer, not
+                something we run. The text is handed to that system voice locally; it
+                doesn't leave your device to reach us or anyone else.
+              </Text>
+            </View>
+
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>Built for young children</Text>
+              <Text style={styles.privacyBody}>
+                This app is designed for toddlers playing alongside a parent. Because no
+                data is collected from anyone who uses it, there's nothing collected from
+                children specifically either — no profiles, no behavioral advertising, no
+                data to sell.
+              </Text>
+            </View>
+
+            <View style={styles.panel}>
+              <Text style={styles.sectionTitle}>Questions or concerns</Text>
+              <Text style={styles.privacyBody}>Reach out any time: sandilyabis@gmail.com</Text>
+              <Text style={styles.privacyMeta}>Last updated: September 2026</Text>
+            </View>
+
+            <SecondaryButton label="Back" onPress={() => setScreen(privacyReturnScreen)} />
           </ScreenShell>
         )}
       </ScrollView>
@@ -1817,6 +1910,15 @@ const styles = StyleSheet.create({
   toggleKnobActive: { alignSelf: 'flex-end' },
   toggleText: { color: '#24324C', fontSize: 15, fontWeight: '700' },
   helperText: { color: '#596270', fontSize: 14, lineHeight: 20 },
+  privacyLink: {
+    color: '#596270',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
+  privacyBody: { color: '#425063', fontSize: 15, lineHeight: 22 },
+  privacyMeta: { color: '#8892A0', fontSize: 12, fontWeight: '700' },
   primaryButton: {
     alignItems: 'center',
     backgroundColor: '#B9780D',
