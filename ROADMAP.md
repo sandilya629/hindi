@@ -44,10 +44,19 @@ the reasoning isn't lost if it comes up again.
     actually renders — see `STATUS.md` for the full writeup, including why
     the wrong-answer retry path was deliberately left untouched. Verified
     with `tsc --noEmit`.
-  - **Shorten lessons into 4-6 item sub-levels — not started.** Same
-    underlying need as "Sub-levels within larger themes" below; the audit
-    independently flagged it (finding CUX-03) as a P0 completion-rate risk
-    for the four 10+ item themes.
+  - **Shorten lessons into 4-6 item sub-levels — done.** The audit's other
+    P0 finding (CUX-03): the four themes over 6 items (Opposites, Opposites
+    Two, Starter sounds, Numbers) asked every item in one sitting — 10-12
+    prompts, a lot for the toddler audience even with the per-question
+    answer grid already capped at 6 tiles. Each is now split into 4-6-item
+    sub-levels (`currentSubLevel`, derived from progress, no new
+    bookkeeping state); the lesson preview and each Match-and-Listen round
+    only show/ask the current sub-level, with a "Set 1 of 2" label when a
+    theme has more than one. A theme still only unlocks the next once every
+    sub-level is done (`isThemeMastered` unchanged), and the Progress
+    screen's "Review `<Theme>`" button deliberately still reviews the whole
+    theme, not just the current sub-level. See `STATUS.md` for the full
+    writeup and scripted-browser verification.
   - **A parent-facing privacy/trust page — not started.** The audit rates
     this P0 (finding SAFE-01): the app already collects nothing, but that
     posture isn't stated anywhere a parent can see it. Overlaps with "A
@@ -83,12 +92,16 @@ the reasoning isn't lost if it comes up again.
 
 ## Next up (discussed, not started)
 
-- **Sub-levels within larger themes.** Four themes now sit at 10+ items
-  (Opposites, Opposites Two, Starter sounds, Numbers), and asking all of
-  them in one sitting is a lot for a toddler even with the answer grid
-  capped at 6 tiles. Plan: batch each into ~5-6-word levels, broad-first
-  across themes (spiral curriculum) rather than finishing one theme deep
-  before starting the next.
+- **Broad-first curriculum across themes (spiral curriculum).** Splitting
+  each large theme into 4-6-item sub-levels is done (see "BoloBee Product
+  Audit" above) — sub-levels are still played back-to-back within one
+  theme, though, in the same sequential unlock order. The bigger,
+  not-yet-decided idea from the original discussion was to unlock a first
+  sub-level across *several* themes before deepening any one of them
+  (e.g. Food set 1 → Colors set 1 → Opposites set 1 → back to Food set 2),
+  rather than fully mastering one theme before the next ever appears. A
+  real curriculum-sequencing change, not a small follow-on — revisit once
+  there's real usage signal on the simpler within-theme fix.
 - **New themes.** No specific list yet — the two Opposites themes both
   came directly from a kid who played the game asking for them, not from
   a planning session, so the plan is to keep staying open to that channel
