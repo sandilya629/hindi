@@ -23,6 +23,62 @@ the reasoning isn't lost if it comes up again.
 
 ## In progress
 
+- **BoloBee Product Audit — MVP fixes, one at a time.** A separate,
+  evidence-based external audit (`BoloBee_Product_Audit.md`, distinct from
+  the earlier brainstorm document discussed above — this one is a
+  structured P0/P1/P2 review against the actual repo, live site, typecheck,
+  and export, with a benchmark comparison against Lingokids/Duolingo
+  ABC/Khan Academy Kids) recommended a short list of highest-leverage MVP
+  fixes ahead of any redesign. Working through them individually, smallest
+  focused change first, each verified before moving to the next — not a
+  redesign push:
+  - **Lock repeated answer taps after a correct answer — done.** The
+    audit's P0 finding (CUX-02): answer tiles stayed tappable during the
+    async pause/word-replay window after a correct tap, so a toddler's
+    repeated taps could each independently re-run the advance logic
+    (duplicate progress writes, duplicate sounds, reward-copy counts not
+    matching actual known-item counts). Fixed with a lock flag per screen
+    (`answerLocked` for Match-and-Listen, `oppositeAnswerLocked` for Find
+    the Opposite) that disables the tiles and short-circuits the handler
+    from the moment a correct answer lands until the next question
+    actually renders — see `STATUS.md` for the full writeup, including why
+    the wrong-answer retry path was deliberately left untouched. Verified
+    with `tsc --noEmit`.
+  - **Shorten lessons into 4-6 item sub-levels — done.** The audit's other
+    P0 finding (CUX-03): the four themes over 6 items (Opposites, Opposites
+    Two, Starter sounds, Numbers) asked every item in one sitting — 10-12
+    prompts, a lot for the toddler audience even with the per-question
+    answer grid already capped at 6 tiles. Each is now split into 4-6-item
+    sub-levels (`currentSubLevel`, derived from progress, no new
+    bookkeeping state); the lesson preview and each Match-and-Listen round
+    only show/ask the current sub-level, with a "Set 1 of 2" label when a
+    theme has more than one. A theme still only unlocks the next once every
+    sub-level is done (`isThemeMastered` unchanged), and the Progress
+    screen's "Review `<Theme>`" button deliberately still reviews the whole
+    theme, not just the current sub-level. See `STATUS.md` for the full
+    writeup and scripted-browser verification.
+  - **A parent-facing privacy/trust page — not started.** The audit rates
+    this P0 (finding SAFE-01): the app already collects nothing, but that
+    posture isn't stated anywhere a parent can see it. Overlaps with "A
+    privacy policy page" under Launch below; tracked here since the audit
+    treats it as launch-blocking, not optional polish.
+  - **One parent recap / family phrase prompt — not started.** Audit
+    finding PV-02/PED-02: progress is a per-theme Known/New/Practice list
+    today, not a parent-readable "this week your child learned X, try
+    saying Y at home" moment.
+  - **Recorded human audio for the first Hindi pack — not started.** Audit
+    finding CUX-06: vocabulary audio is device TTS (`expo-speech`); the
+    audit's own recommendation is to record real native-speaker audio for
+    the first 50-75 MVP words and keep TTS as a fallback, not the
+    production voice, since heritage-language trust depends on it sounding
+    right. Bigger lift than the others (needs sourced audio), sequenced
+    last.
+
+  Everything else in the audit (mission-scene game redesign, spaced
+  review, content-pack architecture, five-language rollout, monetization)
+  is P1/P2 in its own roadmap table — noted for later, not being pulled
+  forward alongside these five.
+
 - **Tamil native-speaker verification.** The single biggest open item.
   [`tamil-words-for-review.csv`](tamil-words-for-review.csv) and
   [`hindi-words-for-review.csv`](hindi-words-for-review.csv) list every
@@ -36,12 +92,16 @@ the reasoning isn't lost if it comes up again.
 
 ## Next up (discussed, not started)
 
-- **Sub-levels within larger themes.** Four themes now sit at 10+ items
-  (Opposites, Opposites Two, Starter sounds, Numbers), and asking all of
-  them in one sitting is a lot for a toddler even with the answer grid
-  capped at 6 tiles. Plan: batch each into ~5-6-word levels, broad-first
-  across themes (spiral curriculum) rather than finishing one theme deep
-  before starting the next.
+- **Broad-first curriculum across themes (spiral curriculum).** Splitting
+  each large theme into 4-6-item sub-levels is done (see "BoloBee Product
+  Audit" above) — sub-levels are still played back-to-back within one
+  theme, though, in the same sequential unlock order. The bigger,
+  not-yet-decided idea from the original discussion was to unlock a first
+  sub-level across *several* themes before deepening any one of them
+  (e.g. Food set 1 → Colors set 1 → Opposites set 1 → back to Food set 2),
+  rather than fully mastering one theme before the next ever appears. A
+  real curriculum-sequencing change, not a small follow-on — revisit once
+  there's real usage signal on the simpler within-theme fix.
 - **New themes.** No specific list yet — the two Opposites themes both
   came directly from a kid who played the game asking for them, not from
   a planning session, so the plan is to keep staying open to that channel

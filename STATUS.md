@@ -23,8 +23,11 @@ assets since these are abstract/relational/action concepts, not concrete
 nouns (see Visual design below).
 
 A theme unlocks once every item in the previous theme is marked "known"
-(`isThemeMastered`). There are no sub-levels within a theme yet — see
-"Discussed but not built" below.
+(`isThemeMastered`, unchanged — still checks the whole theme, not a
+sub-level). Within a theme, the four themes with more than 6 items
+(Opposites, Opposites Two, Starter sounds, Numbers) are now split into
+4-6-item sub-levels for a single Match-and-Listen round — see "Sub-levels
+for larger themes" below.
 
 **Tamil caveat:** the Tamil word list is sourced from common vocabulary but
 has **not been checked by a native speaker**. Every Tamil content array has a
@@ -557,6 +560,83 @@ peak, without needing a new sound asset. This still leaves the same buzzy
 genuinely warmer (a soft "boop"/marimba blip) is a separate, larger call
 that needs an actual sourced sound to audition against real kids, not a
 guess made sight-unseen. Flagged in `ROADMAP.md`, not done here.
+
+## Sub-levels for larger themes (fixed)
+
+Source: `BoloBee_Product_Audit.md`, finding CUX-03, rated P0 ("Split long
+rounds to 4-6 prompts"). Second item worked from that audit, after the
+repeated-tap lock (CUX-02).
+
+**The problem:** `ANSWER_OPTIONS_CAP` already limits how many tiles show
+per question (6), but a full Match-and-Listen round still asked *every*
+item in the theme before reaching Reward. Four themes exceed 6 items —
+Opposites and Starter sounds (10 each), Numbers (10), Opposites Two (12) —
+so a single sitting on one of those asked 10-12 prompts back to back, a lot
+for the 2-5-year-old audience even with the per-question tile cap already
+in place.
+
+**The fix:** `SUB_LEVEL_MAX_SIZE = 6` and `chunkIntoSubLevels(items,
+maxSize)` split a theme's item array into as-even-as-possible groups no
+larger than 6. Every current theme size divides cleanly: 10 → 5+5, 12 →
+6+6; themes at 6 or fewer items get a single group (unchanged behavior).
+`currentSubLevel(themeId, progress, language)` is a pure function of
+progress — no separate "which sub-level am I on" state to keep in sync —
+that returns the first group not yet fully known, or the last group once
+everything is. It's recomputed from progress everywhere it's needed
+(lesson preview, starting a round), so it always reflects the latest
+state with no extra bookkeeping.
+
+`startLesson()` now asks only the current sub-level's items
+(`activeSubLevel.items`) instead of the whole theme; the lesson preview
+screen shows only that sub-level's word cards and a "Set 1 of 2" /
+"Set 2 of 2" label in the kicker when a theme has more than one sub-level
+(nothing extra shown for the themes that don't). `buildAnswerOptions`'s
+distractor pool is untouched — it still draws from the *whole* theme
+(`themeItems`), so wrong-answer tiles aren't artificially limited to just
+the current sub-level's words; only how many *questions* one sitting asks
+changed, not the answer-tile variety.
+
+**What stays exactly as it was:**
+- `isThemeMastered` (and everything downstream of it — next-theme
+  unlocking, `currentThemeId`, the Themes-path mastery badge) still checks
+  every item across the *whole* theme, so a theme only unlocks the next
+  one once every sub-level is done. Verified: completing Opposites'
+  sub-level 1 (5/10) does not unlock Opposites Two; completing sub-level 2
+  does, with the existing mastery banner ("You mastered Opposites!
+  Opposites Two is now unlocked.") firing at the correct moment.
+- The review-round mechanism (missed items re-asked before Reward) needed
+  no change — `missedThisLesson` only ever contains ids from whatever
+  round is currently running, sub-level or full, so it stays correctly
+  scoped automatically.
+- The Progress screen's "Review `<Theme>`" button intentionally bypasses
+  sub-leveling: `startLesson({ fullReview: true })` asks every item in the
+  theme, since "review what I've learned here" reasonably means the whole
+  theme, not just whichever sub-level happens to be current (which, once a
+  theme is fully mastered, would otherwise silently mean "just the last
+  5-6 words," a real gap this explicitly avoids). The normal "Play" button
+  from the lesson preview calls `startLesson()` with no options, which
+  defaults to the current sub-level.
+
+**One accuracy fix along the way:** the Reward screen's "N words
+practiced" line used to read `themeItems.length` (the whole theme) — which
+would now overstate the round just played (e.g. showing "10" after a
+5-item sub-level). Introduced `roundSize` state, set at `startLesson()`
+time to however many items that round actually asked, and used it in the
+Reward subtitle instead. Same category of mismatched-count bug the
+repeated-tap-lock fix (CUX-02) had already caught once — worth being
+deliberate about here rather than reintroducing it.
+
+Verified end-to-end with a scripted browser (seeded progress via
+`localStorage` to jump straight to the Opposites theme, since it's several
+themes deep in the unlock order): confirmed sub-level 1 of 2 shows 5 items
+and "Set 1 of 2"; playing it through reaches Reward reporting "5 words
+practiced" (not 10); re-entering the theme lands on sub-level 2 of 2 with
+the other 5 items, no repeats/no gaps; completing it triggers the mastery
+banner and unlocks Opposites Two, with the Themes screen correctly showing
+Opposites at 10/10; "Review Opposites" from the Progress screen starts a
+full 10-item round (1/10), not a 5-item one; a single-sub-level theme
+(Food, 6 items) shows no "Set" label and all 6 words, unchanged. No
+console errors in any of these. `tsc --noEmit` passes clean.
 
 ## Deployment
 
