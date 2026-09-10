@@ -558,6 +558,54 @@ genuinely warmer (a soft "boop"/marimba blip) is a separate, larger call
 that needs an actual sourced sound to audition against real kids, not a
 guess made sight-unseen. Flagged in `ROADMAP.md`, not done here.
 
+## Repeated-tap lock after correct answers (fixed)
+
+Source: `BoloBee_Product_Audit.md` (external product/UX audit), finding
+CUX-02, rated P0 in its roadmap table ("Lock answer input after correct
+taps"). Uploaded and worked from directly — no separate rewrite of the
+finding into `ROADMAP.md` was needed since it was fixed the same session.
+
+**The bug:** in both Match-and-Listen (`handleAnswer`) and Find the
+Opposite (`handleOppositeAnswer`), the answer tiles were never disabled and
+the handlers never checked whether a correct answer was already in
+progress. A correct tap starts an async chain — success sound, a word
+replay via `speakWord`/`waitForSpeechIdle`, then a `REACTION_PAUSE_MS`
+pause — before the next question actually appears. A toddler tapping the
+same (or another) tile again during that window re-entered the handler
+from scratch: a second, independent `advanceToNext` closure with its own
+`advanced` flag and its own `setTimeout`, a second progress write, a second
+success sound. Confirmed in the audit's own walkthrough: repeated correct
+taps produced progress/reward-copy counts that didn't match (4 known items
+vs. "6 words practiced").
+
+**The fix:** two small pieces of state, `answerLocked` and
+`oppositeAnswerLocked`, one per screen. Set to `true` the moment a correct
+answer is registered; the answer tiles get `disabled={answerLocked}` (resp.
+`oppositeAnswerLocked`) so taps are ignored at the `Pressable` level, and
+`handleAnswer`/`handleOppositeAnswer` also guard at the top as a second
+layer (`if (answerLocked) return;`) in case a tap is already in flight when
+the disabled state lands. Both flags reset to `false` at the moment
+`advanceToNext`'s timer actually fires — right as the next question, the
+review round, or the reward screen takes over — so there's no separate
+"unlock" event to keep in sync as new advance branches get added later.
+
+**Deliberately does not touch the wrong-answer path.** A wrong tap has
+never cleared `selectedAnswer`/`oppositeSelectedAnswer` on its own — the
+existing "Try again" flow depends on the child being able to tap a
+*different* tile immediately, and that tap running `handleAnswer` again
+right away. Locking on "any answer selected" (as the audit's literal wording
+suggested — "ignore additional taps while `selectedAnswer` is set") would
+have frozen the game after every wrong answer, since nothing else clears
+that flag on the wrong-answer path. Locking specifically on *correct*
+answers only was the actual fix needed and preserves the retry flow
+byte-for-byte.
+
+Verified with `tsc --noEmit` (clean) after the change; no other screens or
+content were touched. Memory Pairs was not in scope for this finding — its
+own `handleCardPress` already guards re-flipping a card that's mid-flip or
+matched (`matchedCards.includes(...) || flippedCards.some(...)`), so it
+didn't share this bug.
+
 ## Deployment
 
 - GitHub: `sandilya629/hindi`, branch `main`.
