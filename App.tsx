@@ -728,6 +728,14 @@ export default function App() {
   const [matchIndex, setMatchIndex] = useState(0);
   const [attempts, setAttempts] = useState<Record<string, number>>({});
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  // Locks the answer tiles once a correct tap is registered, until the next
+  // question is actually on screen. Without this, a toddler's repeated taps
+  // during the reaction-pause/speech-replay delay each re-run handleAnswer
+  // from scratch (own advanceToNext timer, own progress write, own success
+  // sound) — see BoloBee_Product_Audit.md finding CUX-02. Deliberately does
+  // NOT lock on a wrong answer: retrying a different tile right away is the
+  // intended "Try again" flow and must keep working exactly as before.
+  const [answerLocked, setAnswerLocked] = useState(false);
   // How many items the round that just finished actually asked - captured
   // at startLesson() time so the Reward screen can report an accurate
   // count now that a round is a sub-level slice, not always the whole
@@ -751,6 +759,8 @@ export default function App() {
   const [oppositePromptOrder, setOppositePromptOrder] = useState<LessonItem[]>([]);
   const [oppositeAnswerOrder, setOppositeAnswerOrder] = useState<LessonItem[]>([]);
   const [oppositeSelectedAnswer, setOppositeSelectedAnswer] = useState<string | null>(null);
+  // Same repeated-tap lock as answerLocked above, for Find the Opposite.
+  const [oppositeAnswerLocked, setOppositeAnswerLocked] = useState(false);
   const [oppositeFeedback, setOppositeFeedback] = useState('Find the opposite.');
   // Guards the "erase all progress" action on the Progress screen: was a
   // single, ungated tap with no confirmation - a child exploring the app
@@ -900,6 +910,7 @@ export default function App() {
     setMatchIndex(0);
     setAttempts({});
     setSelectedAnswer(null);
+    setAnswerLocked(false);
     setFeedback('Tap what you hear.');
     setMissedThisLesson([]);
     setIsReviewRound(false);
@@ -917,6 +928,10 @@ export default function App() {
   }
 
   function handleAnswer(itemId: string) {
+    // Ignore further taps once a correct answer is already locked in and
+    // waiting to advance — see answerLocked's declaration above.
+    if (answerLocked) return;
+
     const isCorrect = itemId === currentItem.id;
     const nextAttempts = { ...attempts, [currentItem.id]: (attempts[currentItem.id] ?? 0) + 1 };
     setAttempts(nextAttempts);
@@ -930,6 +945,7 @@ export default function App() {
       return;
     }
 
+    setAnswerLocked(true);
     playSuccessSound();
     setFeedback(`Nice! ${currentItem.word} means ${currentItem.meaning}.`);
     const nextProgress = { ...progress, [currentItem.id]: 'known' as ItemStatus };
@@ -946,6 +962,11 @@ export default function App() {
       if (advanced) return;
       advanced = true;
       setTimeout(() => {
+        // Unlock right as we actually advance, regardless of which branch
+        // below fires — the next question, review round, or reward screen
+        // is about to render, so fresh taps are safe to accept again.
+        setAnswerLocked(false);
+
         if (matchIndex < promptOrder.length - 1) {
           setMatchIndex((index) => index + 1);
           setAnswerOrder(buildAnswerOptions(promptOrder[matchIndex + 1], themeItems, ANSWER_OPTIONS_CAP));
@@ -998,6 +1019,7 @@ export default function App() {
   function startOppositeGame() {
     setOppositeIndex(0);
     setOppositeSelectedAnswer(null);
+    setOppositeAnswerLocked(false);
     setOppositeFeedback('Find the opposite.');
     const order = shuffleItems(themeItems);
     setOppositePromptOrder(order);
@@ -1007,6 +1029,10 @@ export default function App() {
   }
 
   function handleOppositeAnswer(itemId: string) {
+    // Same repeated-tap guard as handleAnswer above — ignore taps while a
+    // correct answer is already locked in and waiting to advance.
+    if (oppositeAnswerLocked) return;
+
     const correctItem = themeItems.find((item) => item.id === currentOppositeItem.oppositeId);
     const isCorrect = itemId === correctItem?.id;
     setOppositeSelectedAnswer(itemId);
@@ -1017,6 +1043,7 @@ export default function App() {
       return;
     }
 
+    setOppositeAnswerLocked(true);
     playSuccessSound();
     setOppositeFeedback(correctItem ? `Nice! The opposite of ${currentOppositeItem.word} is ${correctItem.word}.` : 'Nice!');
 
@@ -1025,6 +1052,10 @@ export default function App() {
       if (advanced) return;
       advanced = true;
       setTimeout(() => {
+        // Unlock right as we actually advance — see the matching comment
+        // in handleAnswer's advanceToNext above.
+        setOppositeAnswerLocked(false);
+
         if (oppositeIndex < oppositePromptOrder.length - 1) {
           const nextItem = oppositePromptOrder[oppositeIndex + 1];
           const nextCorrect = themeItems.find((item) => item.id === nextItem.oppositeId) ?? nextItem;
@@ -1105,6 +1136,8 @@ export default function App() {
     setMatchedCards([]);
     setFlippedCards([]);
     setSelectedAnswer(null);
+    setAnswerLocked(false);
+    setOppositeAnswerLocked(false);
     setFeedback('Tap what you hear.');
     setMissedThisLesson([]);
     setIsReviewRound(false);
@@ -1354,6 +1387,7 @@ export default function App() {
                   <Pressable
                     key={item.id}
                     onPress={() => handleAnswer(item.id)}
+                    disabled={answerLocked}
                     style={[styles.answerTile, isCorrect && styles.answerCorrect, isWrong && styles.answerWrong]}
                     accessibilityRole="button"
                   >
@@ -1397,6 +1431,7 @@ export default function App() {
                   <Pressable
                     key={item.id}
                     onPress={() => handleOppositeAnswer(item.id)}
+                    disabled={oppositeAnswerLocked}
                     style={[styles.answerTile, isCorrect && styles.answerCorrect, isWrong && styles.answerWrong]}
                     accessibilityRole="button"
                   >
