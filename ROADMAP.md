@@ -23,6 +23,80 @@ the reasoning isn't lost if it comes up again.
 
 ## In progress
 
+- **BoloBee Product Audit — MVP fixes, one at a time.** A separate,
+  evidence-based external audit (`BoloBee_Product_Audit.md`, distinct from
+  the earlier brainstorm document discussed above — this one is a
+  structured P0/P1/P2 review against the actual repo, live site, typecheck,
+  and export, with a benchmark comparison against Lingokids/Duolingo
+  ABC/Khan Academy Kids) recommended a short list of highest-leverage MVP
+  fixes ahead of any redesign. Working through them individually, smallest
+  focused change first, each verified before moving to the next — not a
+  redesign push:
+  - **Lock repeated answer taps after a correct answer — done.** The
+    audit's P0 finding (CUX-02): answer tiles stayed tappable during the
+    async pause/word-replay window after a correct tap, so a toddler's
+    repeated taps could each independently re-run the advance logic
+    (duplicate progress writes, duplicate sounds, reward-copy counts not
+    matching actual known-item counts). Fixed with a lock flag per screen
+    (`answerLocked` for Match-and-Listen, `oppositeAnswerLocked` for Find
+    the Opposite) that disables the tiles and short-circuits the handler
+    from the moment a correct answer lands until the next question
+    actually renders — see `STATUS.md` for the full writeup, including why
+    the wrong-answer retry path was deliberately left untouched. Verified
+    with `tsc --noEmit`.
+  - **Shorten lessons into 4-6 item sub-levels — done.** The audit's other
+    P0 finding (CUX-03): the four themes over 6 items (Opposites, Opposites
+    Two, Starter sounds, Numbers) asked every item in one sitting — 10-12
+    prompts, a lot for the toddler audience even with the per-question
+    answer grid already capped at 6 tiles. Each is now split into 4-6-item
+    sub-levels (`currentSubLevel`, derived from progress, no new
+    bookkeeping state); the lesson preview and each Match-and-Listen round
+    only show/ask the current sub-level, with a "Set 1 of 2" label when a
+    theme has more than one. A theme still only unlocks the next once every
+    sub-level is done (`isThemeMastered` unchanged), and the Progress
+    screen's "Review `<Theme>`" button deliberately still reviews the whole
+    theme, not just the current sub-level. See `STATUS.md` for the full
+    writeup and scripted-browser verification.
+  - **A parent-facing privacy/trust page — done.** The audit's third P0
+    finding (SAFE-01): the app already collected nothing, but that posture
+    was never stated anywhere a parent could see it in-product. A new
+    in-app "Privacy & data" screen (plain language, no legal jargon) now
+    covers exactly what the audit asked for — no accounts, no ads, no
+    analytics, no microphone/voice recording, where progress is actually
+    stored and its limits (this device only, no account to restore from),
+    how the built-in text-to-speech works, and a contact address —
+    reachable from onboarding (before a parent hands the device over) and
+    from the Progress screen, both deliberately kept off the universal top
+    bar the child also uses. Overlaps with, and now supersedes, "A privacy
+    policy page" under Launch below. See `STATUS.md` for the full writeup,
+    including what's deliberately not done yet (a dedicated shareable URL
+    — the app has no router today).
+  - **One parent recap / family phrase prompt — done, narrower than the
+    audit's full ask.** Findings PV-02/PED-02 wanted a phrase for every
+    one of the 188 words, hand-authored per item — real content work, and
+    doing that for Tamil specifically would add new unverified-translation
+    risk on top of the vocabulary itself already being flagged (see "What's
+    built" above). Shipped instead: a "For you" panel on the Reward screen
+    listing every word from the round just finished plus one "try it
+    today" phrase, built entirely from data already in the app (word,
+    transliteration, meaning) — no new authored content, works for all 13
+    themes and both languages immediately. The full per-word curated
+    phrase library from the audit is still open if wanted later. See
+    `STATUS.md` for the wording choices (why not "this week," why not a
+    fully natural sentence per word) and review-round verification.
+  - **Recorded human audio for the first Hindi pack — not started.** Audit
+    finding CUX-06: vocabulary audio is device TTS (`expo-speech`); the
+    audit's own recommendation is to record real native-speaker audio for
+    the first 50-75 MVP words and keep TTS as a fallback, not the
+    production voice, since heritage-language trust depends on it sounding
+    right. Bigger lift than the others (needs sourced audio), sequenced
+    last.
+
+  Everything else in the audit (mission-scene game redesign, spaced
+  review, content-pack architecture, five-language rollout, monetization)
+  is P1/P2 in its own roadmap table — noted for later, not being pulled
+  forward alongside these five.
+
 - **Tamil native-speaker verification.** The single biggest open item.
   [`tamil-words-for-review.csv`](tamil-words-for-review.csv) and
   [`hindi-words-for-review.csv`](hindi-words-for-review.csv) list every

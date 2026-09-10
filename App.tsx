@@ -692,6 +692,12 @@ export default function App() {
   const [character, setCharacter] = useState<CharacterId>('mithu');
   const [isCharacterLoaded, setIsCharacterLoaded] = useState(false);
   const [promptOrder, setPromptOrder] = useState<LessonItem[]>([]);
+  // A stable snapshot of the round's full word list, captured once at
+  // startLesson() time - unlike promptOrder, this is never overwritten by
+  // the review-round remix (which replaces promptOrder with just the
+  // missed items), so the Reward screen's recap can still say what the
+  // whole round covered even after a review round ran.
+  const [roundItems, setRoundItems] = useState<LessonItem[]>([]);
   const [answerOrder, setAnswerOrder] = useState<LessonItem[]>([]);
   const [memoryCards, setMemoryCards] = useState<MemoryCard[]>([]);
   const [oppositeIndex, setOppositeIndex] = useState(0);
@@ -720,6 +726,11 @@ export default function App() {
       ? `You mastered ${masteredMeta?.title}! ${nextMeta.title} is now unlocked.`
       : `You mastered ${masteredMeta?.title}!`;
   })();
+  // The Reward screen's parent-facing recap picks one word from the round
+  // that just finished (roundItems is already shuffled, so the first item
+  // is as good as a random pick) to suggest actually using at home - see
+  // BoloBee_Product_Audit.md findings PV-02/PED-02.
+  const recapItem = roundItems[0] ?? null;
   const homeThemeId = currentThemeId(progress, language);
   const homeThemeMeta = themes.find((theme) => theme.id === homeThemeId);
   const homeThemeItems = itemsForTheme(homeThemeId, language);
@@ -844,6 +855,7 @@ export default function App() {
     setJustMasteredTheme(null);
     const order = shuffleItems(themeItems);
     setPromptOrder(order);
+    setRoundItems(order);
     setAnswerOrder(buildAnswerOptions(order[0], themeItems, ANSWER_OPTIONS_CAP));
     setScreen('match');
   }
@@ -1388,6 +1400,19 @@ export default function App() {
                 </View>
               ) : null}
             </View>
+            {roundItems.length > 0 ? (
+              <View style={styles.panel}>
+                <Text style={styles.kicker}>For you</Text>
+                <Text style={styles.helperText}>
+                  Just practiced: {roundItems.map((item) => `${item.meaning} (${item.transliteration})`).join(', ')}.
+                </Text>
+                {recapItem ? (
+                  <Text style={styles.recapTip}>
+                    Try it today: say "{recapItem.word}" ({recapItem.transliteration}) — it means "{recapItem.meaning}."
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
             <PrimaryButton icon="▶️" label="Play next" onPress={() => setScreen('themes')} />
             {isOppositesTheme ? (
               <SecondaryButton icon="↔️" label="Find the Opposite (optional)" onPress={startOppositeGame} />
@@ -1711,6 +1736,7 @@ const styles = StyleSheet.create({
   toggleKnobActive: { alignSelf: 'flex-end' },
   toggleText: { color: '#24324C', fontSize: 15, fontWeight: '700' },
   helperText: { color: '#596270', fontSize: 14, lineHeight: 20 },
+  recapTip: { color: '#7B5B00', fontSize: 15, fontWeight: '800', lineHeight: 21 },
   primaryButton: {
     alignItems: 'center',
     backgroundColor: '#B9780D',
