@@ -1178,7 +1178,29 @@ export default function App() {
               <Text style={styles.topLinkText}>Home</Text>
             </Pressable>
             <Text style={styles.brandSmall}>{languageMeta.name} Quest</Text>
-            <Pressable style={styles.topLink} onPress={() => setScreen('progress')} accessibilityRole="button" accessibilityLabel="Progress">
+            <Pressable
+              style={styles.topLink}
+              onPress={() => {
+                // Only re-sync from Home: activeTheme otherwise reflects
+                // whichever theme was last actually opened (a lesson
+                // preview, a review, the Reward screen), which is exactly
+                // what a mid-theme or "reviewing an old theme" tap of
+                // Progress should keep showing. From Home specifically,
+                // though, activeTheme can go stale the moment a theme is
+                // mastered - homeThemeId is recomputed from real progress
+                // every render, but activeTheme only updates when a theme
+                // is actually opened, so tapping Progress right from Home
+                // (without first tapping into the newly-unlocked theme)
+                // used to show the *previous* theme's numbers while Home's
+                // own card already pointed at the new one.
+                if (screen === 'home') {
+                  setActiveTheme(homeThemeId);
+                }
+                setScreen('progress');
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Progress"
+            >
               <Text style={styles.topLinkIcon}>⭐</Text>
               <Text style={styles.topLinkText}>Progress</Text>
             </Pressable>

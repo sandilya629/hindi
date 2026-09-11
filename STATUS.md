@@ -800,6 +800,46 @@ separately that the list survives a review round unchanged. Screenshotted
 for a visual check — legible, doesn't crowd the existing reward content.
 No console errors. `tsc --noEmit` passes clean.
 
+## Progress screen showing a stale theme after mastering one (fixed)
+
+Found in production, right after the git-connected auto-deploy went live:
+Home correctly said "Play the Opposites Two lesson, 0/12 words learned,"
+but tapping Progress from the top bar showed "Opposites words, 10 Words
+learned" — the *previous* theme, not the one Home just pointed at.
+
+**Root cause:** Home's card always recomputes `homeThemeId =
+currentThemeId(progress, language)` fresh from real progress on every
+render, so it's never wrong. `activeTheme` (the state the Progress screen
+actually reads) only updates when a theme is *explicitly opened* — a
+lesson preview, "Review `<Theme>`", the Reward screen after finishing a
+round. The universal top-bar "Progress" link, present on every screen,
+never touched `activeTheme` at all. So the moment a theme is mastered,
+Home's pointer moves on immediately, but `activeTheme` stays frozen on
+the just-finished theme until the player actually taps into the new one
+— and tapping Progress in that gap showed the stale theme's numbers next
+to a Home card already announcing the new one.
+
+**The fix:** the top-bar Progress link now syncs `activeTheme` to
+`homeThemeId` — but only when tapped *from the Home screen*
+(`if (screen === 'home') setActiveTheme(homeThemeId);`), not
+unconditionally. That distinction matters: unconditionally syncing to
+"whatever's current" would break the legitimate case of browsing into an
+older, already-mastered theme on purpose (via the Themes path, to review
+it) and then checking its Progress — that flow depends on `activeTheme`
+staying put at whatever theme was just opened, not snapping back to
+"current." Scoping the sync to Home specifically fixes exactly the
+reported gap without touching that.
+
+Verified with a scripted browser: reproduced the exact bug (master
+Opposites, open Opposites Two indirectly via Themes/Home without
+explicitly entering it, confirm Progress showed the stale "Opposites, 10
+words" while Home already said "Opposites Two, 0/12") against the
+pre-fix code; confirmed the fix makes Progress correctly show "Opposites
+Two words" instead. Separately confirmed the non-regression case:
+deliberately opening an older mastered theme (Food) via the Themes path
+and then tapping Progress still shows that theme, not the current one.
+No console errors. `tsc --noEmit` passes clean.
+
 ## Deployment
 
 - GitHub: `sandilya629/hindi`, branch `main`.
