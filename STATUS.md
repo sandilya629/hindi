@@ -840,6 +840,25 @@ deliberately opening an older mastered theme (Food) via the Themes path
 and then tapping Progress still shows that theme, not the current one.
 No console errors. `tsc --noEmit` passes clean.
 
+**Follow-up report, checked, not a bug:** right after the fix above shipped,
+a second mismatch was reported — Home showing "0/5" (Colors) while Progress
+showed "6 words learned, 0 needs practice" (Food) after finishing the very
+first lesson. Reproduced this one too, and both numbers are individually
+correct: Reward's own "See progress" button is deliberately contextual and
+shows the theme *just finished* (Food, 6/6), while Home always shows the
+theme *up next* (Colors, 0/5, immediately once Food is mastered) — two
+different themes' stats, not the same theme reported inconsistently. The
+fix above still works correctly for its actual bug (confirmed: going Home
+first, then tapping Progress from there, correctly shows Colors' 0/5, not
+stale Food data).
+
+The real gap is UX clarity, not data: nothing labels *which* theme's
+number you're looking at prominently enough to make the jump obvious when
+two screens show different themes back-to-back. Options raised (a more
+prominent theme label on both screens) were left as-is for now, by
+request — noted here so this doesn't get re-investigated as a fresh "bug"
+later without this context.
+
 ## Deployment
 
 - GitHub: `sandilya629/hindi`, branch `main`.
