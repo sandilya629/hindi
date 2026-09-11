@@ -803,25 +803,15 @@ No console errors. `tsc --noEmit` passes clean.
 ## Deployment
 
 - GitHub: `sandilya629/hindi`, branch `main`.
-- **Two live Vercel projects right now, by design, not by accident** — see
-  "Git-connected auto-deploy" below for why a second project exists instead
-  of converting the first one in place.
-  - `hindi-quest` (original, manual): scope `sandilyas629`, live at
-    https://hindi-quest.vercel.app. Not connected to GitHub — every update
-    up to this point was a manual `vercel deploy --prod` from a locally (or
-    Claude-sandbox-)built `dist/`. Kept exactly as-is, still serving
-    traffic, until there's a deliberate decision to retire it — this is the
-    URL already shared/bookmarked, so it doesn't move without that being a
-    conscious choice.
-  - The new git-connected project (see below) is the one that now gets
-    every future `main` push automatically. Both currently serve the same
-    code as of this session; they will drift if the old one stops getting
-    manual deploys, which is the intended end state. *(Project name/URL
-    filled in right after creation in this same session — see the commit
-    immediately after this one if this note is still here.)*
-- **Manual deploy recipe**, still valid for the original `hindi-quest`
-  project specifically (the project has no backend/API routes — pure
-  static export):
+- Vercel: project `hindi-quest` (`prj_FJcYUqbnOnkO4SyinHuowMIlcR19`), scope
+  `sandilyas629`, live at https://hindi-quest.vercel.app — **now
+  git-connected to `sandilya629/hindi`** (see "Git-connected auto-deploy"
+  below). This is the same project and the same URL that's been live all
+  along, not a new one — every push to `main` from here on builds and
+  deploys automatically to it.
+- **Manual deploy recipe** (still works as a fallback, e.g. to force a
+  rebuild without a new commit, or if the git integration is ever
+  disconnected):
   ```
   npx expo export --platform web
   cp -r .vercel dist/.vercel   # dist/ is regenerated each export, losing the link
@@ -841,29 +831,54 @@ off from here directly — but not by uploading this app's built files
 through it: the file-embedding tool (`deploy_to_vercel`) requires every
 file's contents inline in one call, and this app's assets (mainly the three
 mascot character PNGs) push that past what's practical to send in a single
-tool call (~2MB once base64-encoded). The tool that deploys straight from
-GitHub (`create_git_project`) doesn't have that problem — Vercel pulls and
-builds the source on its own infrastructure — but it explicitly refuses to
-attach to an *existing* unlinked project of the same name (a safety
-feature, not a limitation to route around), so it was used to create a
-**new**, separate project rather than converting `hindi-quest` in place.
-Confirmed with the app owner before proceeding, given this is a
-one-way-ish infrastructure decision (see the two-project note above).
+tool call (~2MB once base64-encoded).
 
-- `vercel.json` (repo root, new) tells Vercel exactly how to build this
-  Expo static export, since it isn't a framework Vercel's own detection
+The tool that deploys straight from GitHub (`create_git_project`) doesn't
+have that size problem — Vercel pulls and builds the source on its own
+infrastructure — but it explicitly refuses to attach to an *existing*
+unlinked project of the same name (a safety feature). Two attempts through
+that tool each created an orphaned project (`hindi`, then
+`hindi-quest-auto`) that the Vercel API itself couldn't read back
+(`get_project`/`list_projects` 404'd on both, even though they were
+visible in the Vercel dashboard's project switcher) — a real bug/scoping
+quirk in that tool path, not a config problem on this repo's side. Both
+were abandoned rather than debugged further.
+
+**What actually worked:** installing the Vercel-for-GitHub app is a
+browser-based GitHub OAuth consent step no API can perform on someone
+else's behalf (by design — that's a security boundary, not a gap to route
+around). Once the app owner did that one manual step and connected the
+repo through the project's own **Settings → Git** page in the Vercel
+dashboard, it attached to the **original `hindi-quest` project directly**
+— no second project needed after all, and no URL migration to plan for.
+The two orphaned attempts (`hindi`, `hindi-quest-auto`) are harmless dead
+projects sitting in the dashboard; delete them whenever convenient, no
+rush.
+
+Connecting the repo does not itself trigger a deployment of whatever `main`
+already was at connection time — Vercel's git integration only builds on
+*new* pushes from that point forward. The doc fix in this commit is what
+triggers the first one.
+
+- `vercel.json` (repo root) tells Vercel exactly how to build this Expo
+  static export, since it isn't a framework Vercel's own detection
   recognizes automatically:
   ```json
   { "buildCommand": "npx expo export --platform web", "outputDirectory": "dist", "installCommand": "npm install" }
   ```
 - `package.json` gained an `"engines": { "node": "20.x || 22.x" }` field.
-  This isn't cosmetic: the existing `hindi-quest` project's Node runtime is
-  pinned to 24.x, which is the exact version that broke local Expo/Metro
-  builds earlier this session (`ERR_PACKAGE_PATH_NOT_EXPORTED` on
+  This isn't cosmetic: `hindi-quest`'s configured Node runtime is 24.x,
+  which is the exact version that broke local Expo/Metro builds earlier
+  this session (`ERR_PACKAGE_PATH_NOT_EXPORTED` on
   `metro/src/lib/TerminalReporter` — a documented upstream bug, expo/expo
-  #39337). Pinning `engines.node` tells Vercel's build image to use a
+  #39337). Pinning `engines.node` asks Vercel's build image to use a
   version already confirmed to work (this sandbox runs Node 22 and builds
-  clean) rather than risk hitting that same bug on every future auto-build.
+  clean) instead. **Not yet confirmed whether `engines.node` actually wins
+  over the project's dashboard Node-version setting on Vercel's build
+  image** — the first auto-triggered build (this commit) is the real test;
+  check its build log if it fails with the same `ERR_PACKAGE_PATH_NOT_EXPORTED`
+  signature, and lower the project's Node Version dropdown in Settings →
+  General by hand if so.
 
 ## Testing methodology used throughout this project
 
