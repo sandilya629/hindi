@@ -39,6 +39,10 @@ const SOUND_SPEECH_RATE = 0.22;
 // line for that ruled-out theory). ~1.0 is a voice's own natural pace;
 // kept just under it for a touch of warmth without dragging.
 const UI_PROMPT_SPEECH_RATE = 0.95;
+// Advanced mode's speech rate: normal conversational pace, used for every
+// word regardless of length - no toddler-paced stretching at all. Deliberate
+// opt-in only (onboarding toggle), never the default.
+const ADVANCED_SPEECH_RATE = 1.0;
 // Themes with more than this many words (Numbers, Starter sounds have 10)
 // still only show this many answer tiles per question — a toddler scanning
 // a wall of tiles for the right one loses more than they gain from extra
@@ -64,11 +68,11 @@ const languageVoiceCode: Record<LanguageId, string> = {
   ta: 'ta-IN',
 };
 
-function speakWord(text: string, language: LanguageId, onDone?: () => void) {
+function speakWord(text: string, language: LanguageId, onDone?: () => void, advancedMode = false) {
   Speech.stop();
   Speech.speak(text, {
     language: languageVoiceCode[language],
-    rate: text.length <= 1 ? SOUND_SPEECH_RATE : SPEECH_RATE,
+    rate: advancedMode ? ADVANCED_SPEECH_RATE : text.length <= 1 ? SOUND_SPEECH_RATE : SPEECH_RATE,
     onDone,
     onStopped: onDone,
     onError: onDone,
@@ -197,6 +201,11 @@ type LessonItem = {
   // Id of this item's opposite within the same theme/language. Only set on
   // Opposites/Opposites Two items — powers the "Find the Opposite" game.
   oppositeId?: string;
+  // Optional scenario sentence ("मुझे भूख लगी है! मुझे केला दो।") spoken and
+  // shown instead of the bare word on Match-and-Listen's prompt card. Falls
+  // back to `word` when absent, so themes without one behave exactly as
+  // before. Hindi Food only for now (pilot) — see ROADMAP.md.
+  prompt?: string;
 };
 
 type ThemeId = 'food' | 'colors' | 'opposites' | 'opposites2' | 'family' | 'sounds' | 'animals' | 'numbers' | 'body' | 'clothes' | 'transport' | 'places' | 'school';
@@ -219,13 +228,16 @@ type MemoryCard = {
   language: LanguageId;
 };
 
+// `prompt` sentences are a pilot for the "scenario game" idea (ROADMAP.md) -
+// drafted, not yet native-speaker-verified. Sanity-check before relying on
+// them with real families, same bar as the rest of the Hindi content.
 const foodItems: LessonItem[] = [
-  { id: 'paani', word: 'पानी', language: 'hi', transliteration: 'paani', meaning: 'water', theme: 'Food', color: '#78C6E7', emoji: '💧' },
-  { id: 'doodh', word: 'दूध', language: 'hi', transliteration: 'doodh', meaning: 'milk', theme: 'Food', color: '#F6F1DF', emoji: '🥛' },
-  { id: 'aam', word: 'आम', language: 'hi', transliteration: 'aam', meaning: 'mango', theme: 'Food', color: '#F7B733', emoji: '🥭' },
-  { id: 'roti', word: 'रोटी', language: 'hi', transliteration: 'roti', meaning: 'flatbread', theme: 'Food', color: '#DFA45B', emoji: '🫓' },
-  { id: 'chawal', word: 'चावल', language: 'hi', transliteration: 'chawal', meaning: 'rice', theme: 'Food', color: '#EEE7CF', emoji: '🍚' },
-  { id: 'kela', word: 'केला', language: 'hi', transliteration: 'kela', meaning: 'banana', theme: 'Food', color: '#F5DE6E', emoji: '🍌' },
+  { id: 'paani', word: 'पानी', language: 'hi', transliteration: 'paani', meaning: 'water', theme: 'Food', color: '#78C6E7', emoji: '💧', prompt: 'मुझे प्यास लगी है! मुझे पानी दो।' },
+  { id: 'doodh', word: 'दूध', language: 'hi', transliteration: 'doodh', meaning: 'milk', theme: 'Food', color: '#F6F1DF', emoji: '🥛', prompt: 'मुझे प्यास लगी है! मुझे दूध दो।' },
+  { id: 'aam', word: 'आम', language: 'hi', transliteration: 'aam', meaning: 'mango', theme: 'Food', color: '#F7B733', emoji: '🥭', prompt: 'मुझे भूख लगी है! मुझे आम दो।' },
+  { id: 'roti', word: 'रोटी', language: 'hi', transliteration: 'roti', meaning: 'flatbread', theme: 'Food', color: '#DFA45B', emoji: '🫓', prompt: 'मुझे भूख लगी है! मुझे रोटी दो।' },
+  { id: 'chawal', word: 'चावल', language: 'hi', transliteration: 'chawal', meaning: 'rice', theme: 'Food', color: '#EEE7CF', emoji: '🍚', prompt: 'मुझे भूख लगी है! मुझे चावल दो।' },
+  { id: 'kela', word: 'केला', language: 'hi', transliteration: 'kela', meaning: 'banana', theme: 'Food', color: '#F5DE6E', emoji: '🍌', prompt: 'मुझे भूख लगी है! मुझे केला दो।' },
 ];
 
 // NOTE: sourced from common, well-established everyday Tamil vocabulary,
@@ -724,6 +736,11 @@ export default function App() {
   const [language, setLanguage] = useState<LanguageId>('hi');
   const [isLanguageLoaded, setIsLanguageLoaded] = useState(false);
   const [showPronunciation, setShowPronunciation] = useState(false);
+  // Opt-in, next to the language picker - not a separate "kid vs adult"
+  // mode (PRODUCT.md explicitly doesn't have one). Normal-speed speech, no
+  // answer-tile cap, and no English-meaning hint on quiz tiles. Not
+  // persisted, same as showPronunciation above.
+  const [advancedMode, setAdvancedMode] = useState(false);
   const [progress, setProgress] = useState<Progress>(initialProgress);
   const [matchIndex, setMatchIndex] = useState(0);
   const [attempts, setAttempts] = useState<Record<string, number>>({});
@@ -813,21 +830,24 @@ export default function App() {
   const themePracticeCount = themeItems.filter((item) => progress[item.id] === 'practice').length;
   const currentItem = promptOrder[matchIndex] ?? promptOrder[0] ?? themeItems[0];
   const adultSupport = showPronunciation;
+  // No cap at all in advanced mode - see ANSWER_OPTIONS_CAP's comment for
+  // why toddlers get a capped grid; an adult can scan every option.
+  const answerCap = advancedMode ? Infinity : ANSWER_OPTIONS_CAP;
   const isOppositesTheme = activeTheme === 'opposites' || activeTheme === 'opposites2';
   const currentOppositeItem = oppositePromptOrder[oppositeIndex] ?? oppositePromptOrder[0] ?? themeItems[0];
   const currentOppositeAnswer = themeItems.find((item) => item.id === currentOppositeItem.oppositeId);
 
   useEffect(() => {
     if (screen === 'match') {
-      speakWord(currentItem.word, currentItem.language);
+      speakWord(currentItem.prompt ?? currentItem.word, currentItem.language, undefined, advancedMode);
     }
-  }, [screen, matchIndex, isReviewRound]);
+  }, [screen, matchIndex, isReviewRound, advancedMode]);
 
   useEffect(() => {
     if (screen === 'opposite') {
-      speakWord(currentOppositeItem.word, currentOppositeItem.language);
+      speakWord(currentOppositeItem.word, currentOppositeItem.language, undefined, advancedMode);
     }
-  }, [screen, oppositeIndex]);
+  }, [screen, oppositeIndex, advancedMode]);
 
   // Reward is the one post-lesson screen with a genuine branching choice
   // (keep playing vs. the optional bonus activity vs. check progress) -
@@ -944,7 +964,7 @@ export default function App() {
     const order = shuffleItems(roundSourceItems);
     setPromptOrder(order);
     setRoundItems(order);
-    setAnswerOrder(buildAnswerOptions(order[0], themeItems, ANSWER_OPTIONS_CAP));
+    setAnswerOrder(buildAnswerOptions(order[0], themeItems, answerCap));
     setScreen('match');
   }
 
@@ -990,7 +1010,7 @@ export default function App() {
 
         if (matchIndex < promptOrder.length - 1) {
           setMatchIndex((index) => index + 1);
-          setAnswerOrder(buildAnswerOptions(promptOrder[matchIndex + 1], themeItems, ANSWER_OPTIONS_CAP));
+          setAnswerOrder(buildAnswerOptions(promptOrder[matchIndex + 1], themeItems, answerCap));
           setSelectedAnswer(null);
           setFeedback('Tap what you hear.');
           return;
@@ -1001,7 +1021,7 @@ export default function App() {
           setIsReviewRound(true);
           setMatchIndex(0);
           setPromptOrder(reviewOrder);
-          setAnswerOrder(buildAnswerOptions(reviewOrder[0], themeItems, ANSWER_OPTIONS_CAP));
+          setAnswerOrder(buildAnswerOptions(reviewOrder[0], themeItems, answerCap));
           setSelectedAnswer(null);
           setFeedback('Review round: let\'s try those tricky words again.');
           return;
@@ -1032,7 +1052,7 @@ export default function App() {
         waitForSpeechIdle(MAX_SPEECH_WAIT_MS).then(advanceToNext);
         return;
       }
-      speakWord(currentItem.word, currentItem.language, advanceToNext);
+      speakWord(currentItem.word, currentItem.language, advanceToNext, advancedMode);
       setTimeout(advanceToNext, MAX_SPEECH_WAIT_MS);
     });
   }
@@ -1045,7 +1065,7 @@ export default function App() {
     const order = shuffleItems(themeItems);
     setOppositePromptOrder(order);
     const firstCorrect = themeItems.find((item) => item.id === order[0].oppositeId) ?? order[0];
-    setOppositeAnswerOrder(buildAnswerOptions(firstCorrect, themeItems.filter((item) => item.id !== order[0].id), ANSWER_OPTIONS_CAP));
+    setOppositeAnswerOrder(buildAnswerOptions(firstCorrect, themeItems.filter((item) => item.id !== order[0].id), answerCap));
     setScreen('opposite');
   }
 
@@ -1081,7 +1101,7 @@ export default function App() {
           const nextItem = oppositePromptOrder[oppositeIndex + 1];
           const nextCorrect = themeItems.find((item) => item.id === nextItem.oppositeId) ?? nextItem;
           setOppositeIndex((index) => index + 1);
-          setOppositeAnswerOrder(buildAnswerOptions(nextCorrect, themeItems.filter((item) => item.id !== nextItem.id), ANSWER_OPTIONS_CAP));
+          setOppositeAnswerOrder(buildAnswerOptions(nextCorrect, themeItems.filter((item) => item.id !== nextItem.id), answerCap));
           setOppositeSelectedAnswer(null);
           setOppositeFeedback('Find the opposite.');
           return;
@@ -1103,7 +1123,7 @@ export default function App() {
         waitForSpeechIdle(MAX_SPEECH_WAIT_MS).then(advanceToNext);
         return;
       }
-      speakWord(correctItem.word, correctItem.language, advanceToNext);
+      speakWord(correctItem.word, correctItem.language, advanceToNext, advancedMode);
       setTimeout(advanceToNext, MAX_SPEECH_WAIT_MS);
     });
   }
@@ -1121,7 +1141,7 @@ export default function App() {
     }
 
     if (card.kind === 'sound') {
-      speakWord(card.label, card.language);
+      speakWord(card.label, card.language, undefined, advancedMode);
     }
 
     const nextFlipped = [...flippedCards, card];
@@ -1274,6 +1294,19 @@ export default function App() {
                 <Text style={styles.toggleText}>Show pronunciation help</Text>
               </Pressable>
 
+              <Pressable
+                style={styles.toggleRow}
+                onPress={() => setAdvancedMode((value) => !value)}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: advancedMode }}
+              >
+                <View style={[styles.toggleTrack, advancedMode && styles.toggleTrackActive]}>
+                  <View style={[styles.toggleKnob, advancedMode && styles.toggleKnobActive]} />
+                </View>
+                <Text style={styles.toggleText}>Advanced mode</Text>
+              </Pressable>
+              <Text style={styles.helperText}>Normal-speed speech, every answer shown at once, no English hint on the tiles.</Text>
+
               <Text style={styles.helperText}>Turn sound on. {characterMeta.name} will say each {languageMeta.name} word.</Text>
               <PrimaryButton
                 label={languageMeta.ready ? 'Start' : 'Select Hindi to start'}
@@ -1402,7 +1435,7 @@ export default function App() {
             <Text style={styles.subtitle}>Tap one to hear it. Then {characterMeta.name} will quiz you.</Text>
             <View style={styles.wordPreviewGrid}>
               {activeSubLevel.items.map((item) => (
-                <WordPreview key={item.id} item={item} showPronunciation={adultSupport} onPress={() => speakWord(item.word, item.language)} />
+                <WordPreview key={item.id} item={item} showPronunciation={adultSupport} onPress={() => speakWord(item.word, item.language, undefined, advancedMode)} />
               ))}
             </View>
             <PrimaryButton icon="▶️" label="Play" onPress={() => startLesson()} />
@@ -1418,13 +1451,13 @@ export default function App() {
             </View>
             <Pressable
               style={styles.soundCard}
-              onPress={() => speakWord(currentItem.word, currentItem.language)}
+              onPress={() => speakWord(currentItem.prompt ?? currentItem.word, currentItem.language, undefined, advancedMode)}
               accessibilityRole="button"
               accessibilityLabel="Replay the word"
             >
               <CharacterMascot character={character} mood="speak" language={language} compact />
               <View style={styles.soundCopy}>
-                <Text style={styles.instruction}>Tap what you hear.</Text>
+                <Text style={styles.instruction}>{currentItem.prompt ?? 'Tap what you hear.'}</Text>
                 <Text style={styles.promptWord}>{currentItem.word}</Text>
                 {adultSupport ? <Text style={styles.promptHelp}>{currentItem.transliteration}</Text> : null}
                 <Text style={styles.replayHint}>Tap to hear again</Text>
@@ -1446,7 +1479,7 @@ export default function App() {
                   >
                     <FoodVisual item={item} />
                     <Text style={styles.answerHindi}>{item.word}</Text>
-                    <Text style={styles.answerMeaning}>{item.meaning}</Text>
+                    {advancedMode ? null : <Text style={styles.answerMeaning}>{item.meaning}</Text>}
                   </Pressable>
                 );
               })}
@@ -1462,7 +1495,7 @@ export default function App() {
             </View>
             <Pressable
               style={styles.soundCard}
-              onPress={() => speakWord(currentOppositeItem.word, currentOppositeItem.language)}
+              onPress={() => speakWord(currentOppositeItem.word, currentOppositeItem.language, undefined, advancedMode)}
               accessibilityRole="button"
               accessibilityLabel="Replay the word"
             >
@@ -1490,7 +1523,7 @@ export default function App() {
                   >
                     <FoodVisual item={item} />
                     <Text style={styles.answerHindi}>{item.word}</Text>
-                    <Text style={styles.answerMeaning}>{item.meaning}</Text>
+                    {advancedMode ? null : <Text style={styles.answerMeaning}>{item.meaning}</Text>}
                   </Pressable>
                 );
               })}
