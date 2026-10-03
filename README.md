@@ -25,6 +25,10 @@ the browser.
   where the correct tile is the *opposite* word rather than the same one.
 - **Twemoji-based icons**, not photos — flat, bright, and unambiguous at a
   glance for a 2-3-year-old audience. See [`DESIGN.md`](DESIGN.md) for why.
+- **Advanced mode** (opt-in toggle, not a separate kid/adult flow): normal-
+  speed speech, every answer tile shown at once, no English-meaning hint.
+  Same content as today — a presentation change, not harder vocabulary yet.
+  See `ROADMAP.md` for what's being considered next.
 
 ## Who it's for
 
@@ -55,7 +59,10 @@ override with `--port`). No environment variables or backend setup needed.
 
 ## Deploying
 
-Static export, deployed to Vercel:
+The Vercel project is git-connected: every push to `main` builds and
+deploys automatically, no manual step needed. The manual recipe below
+still works as a fallback (forcing a rebuild without a new commit, or if
+the git integration is ever disconnected):
 
 ```bash
 npx expo export --platform web

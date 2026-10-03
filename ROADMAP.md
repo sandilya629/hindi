@@ -23,6 +23,30 @@ the reasoning isn't lost if it comes up again.
 
 ## In progress
 
+- **Scenario prompts + Advanced mode — shipped, evaluating before going
+  further.** Two requests after real usage: kids enjoying the game enough
+  that a "scenario" framing seemed worth trying (a character expressing a
+  want in a full sentence — "I'm hungry, give me a banana" — rather than
+  just naming the word), and separately, adults asking to use the app
+  themselves. Both shipped as the smallest reasonable first step rather
+  than a redesign:
+  - **Scenario prompts**, Food theme only, 6 sentences, drafted but not
+    yet native-speaker-checked. Same Match-and-Listen engine, same
+    answer tiles — only the thing spoken/displayed above the tile grid
+    changed. Before writing sentences for the other 12 themes: see how
+    this lands with real play first.
+  - **Advanced mode**, one opt-in toggle next to the language picker —
+    not a kid/adult split (see `PRODUCT.md`'s "Users" section, which
+    deliberately doesn't have one). Normal-speed speech, no answer-tile
+    cap, no English-meaning hint on quiz tiles. Same words, same themes,
+    same mastery requirements as today — purely how the existing content
+    is presented, not what content exists. See `STATUS.md`'s "Scenario
+    prompts and Advanced mode" writeup for the full detail and
+    verification.
+
+  See "Advanced mode: harder words, not just faster presentation" below
+  for the deliberately separate next decision this opens up.
+
 - **BoloBee Product Audit — MVP fixes, one at a time.** A separate,
   evidence-based external audit (`BoloBee_Product_Audit.md`, distinct from
   the earlier brainstorm document discussed above — this one is a
@@ -109,6 +133,44 @@ the reasoning isn't lost if it comes up again.
   the other.
 
 ## Next up (discussed, not started)
+
+- **Advanced mode: harder words, not just faster presentation.** Advanced
+  mode today (see "In progress" above) only changes how existing content
+  is shown — same words as the toddler experience, just faster and less
+  hinted. The natural next ask, raised directly: adults who already know
+  the basics want *harder vocabulary*, not just the same words sped up.
+  Two different-sized moves, not yet decided between:
+  1. **Extend existing themes' word pools.** Add a harder tier to each of
+     the 13 themes (e.g. Food gains spices/cooking terms beyond
+     water/milk/mango/rice/bread/banana), shown only when Advanced mode is
+     on. Same engine, same mascot, same progress path — reuses the
+     sub-level machinery just built (`chunkIntoSubLevels`/
+     `currentSubLevel`) rather than inventing a new mechanism: an
+     `advancedOnly` flag on `LessonItem`, filtered in alongside the
+     existing tier when the toggle is on. Smaller, additive, in the same
+     direction as everything shipped so far.
+  2. **A separate content track** — phrases, verb forms, days/time, actual
+     conversational Hindi that doesn't fit the existing noun-vocabulary
+     themes at all. Closer to the dual-track idea already reviewed and
+     declined below under "Deferred pending real signal" — not
+     necessarily wrong to revisit now that there's real adult interest,
+     but a materially bigger commitment than option 1, not a natural
+     extension of it. Worth being explicit that choosing this reopens a
+     previously-declined decision on purpose, rather than drifting into
+     it.
+
+  Leaning toward option 1 first, for the same reason Advanced mode itself
+  started as a single toggle rather than a new onboarding flow: smallest
+  step that tests the actual appetite. Two questions need an answer
+  before building either option:
+  - **Does an advanced-only word count toward a theme's mastery?**
+    Recommendation: no — keep it bonus content that doesn't gate or
+    change the toddler progression path at all, same as how Memory Pairs
+    and Find the Opposite are optional today.
+  - **Does the toggle stay fully self-serve** (anyone can flip it, same as
+    `showPronunciation` today), **or does "already knows the basics" need
+    a light check** (e.g. only offered once a few themes are mastered)?
+    No default assumed here — needs an explicit call.
 
 - **Broad-first curriculum across themes (spiral curriculum).** Splitting
   each large theme into 4-6-item sub-levels is done (see "BoloBee Product

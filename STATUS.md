@@ -859,6 +859,107 @@ prominent theme label on both screens) were left as-is for now, by
 request — noted here so this doesn't get re-investigated as a fresh "bug"
 later without this context.
 
+## Scenario prompts and Advanced mode (added)
+
+Two features requested after real family usage (kids actively playing,
+and separately, adults asking to use the app themselves):
+
+**Scenario prompts — Food theme only, a pilot.** `LessonItem` gained an
+optional `prompt` field — a full sentence ("मुझे भूख लगी है! मुझे केला
+दो।" — "I'm hungry! Give me a banana.") spoken and shown instead of the
+bare word on Match-and-Listen's prompt card. Falls back to the bare word
+when absent, so every theme except Food behaves exactly as before — the
+answer tiles, the correctness check, and `buildAnswerOptions` are
+completely untouched. This is the same "same engine, new framing" move
+that already worked once for Find-the-Opposite: no new screen, no new
+game mechanic, just a different thing being spoken/displayed above the
+tile grid. The 6 Food sentences are drafted, not yet native-speaker-
+checked — same bar as the rest of the Hindi content, see "What's built"
+above.
+
+**Decision point before writing more sentences:** evaluate the pilot
+against real usage first (does the scenario framing actually help, or is
+it just longer audio a toddler tunes out?) before authoring sentences for
+the other 12 themes. No technical blocker either way — the field is
+already generic.
+
+**Advanced mode — a single opt-in toggle, deliberately not a "kid vs
+adult" mode.** `PRODUCT.md` explicitly doesn't have a kid/adult split (see
+its "Users" section) — this stays consistent with that: one toggle next
+to the language picker on onboarding, not a second onboarding branch or a
+different app identity. When on:
+- Normal-speed speech (`ADVANCED_SPEECH_RATE = 1.0`) for every
+  `speakWord` call site (8 of them — the question auto-play, the
+  Find-the-Opposite auto-play, both correct-answer confirmation replays,
+  the Memory Pairs card tap, the lesson-preview tap-to-hear, and both
+  "tap to hear again" replay buttons), replacing the toddler-tuned slow
+  rates entirely rather than scaling them.
+- No cap on Match-and-Listen/Find-the-Opposite answer tiles
+  (`answerCap = advancedMode ? Infinity : ANSWER_OPTIONS_CAP`, read at
+  all 5 `buildAnswerOptions` call sites) — an adult can scan every option
+  a round's pool offers instead of the toddler-tuned 6-tile cap.
+- No English-meaning caption on answer tiles — forces real script/sound
+  recognition instead of reading past it. (The lesson-preview screen
+  still shows the meaning regardless of mode — that screen is explicitly
+  "here's what we're about to learn," not a quiz, so the hint stays.)
+
+Not persisted, same as `showPronunciation` — resets on reload. Verified
+end-to-end with a scripted browser in both modes: toddler mode confirmed
+unchanged (rate 0.32, scenario sentence spoken correctly, 6/6 Food tiles
+with meaning captions); advanced mode confirmed on Opposites (10 items,
+reached via seeded `localStorage` progress) showing all 10 tiles
+uncapped, rate 1.0, no meaning captions. `tsc --noEmit` and
+`expo export --platform web` both clean.
+
+**What Advanced mode does *not* do yet, by design:** change which words
+appear. It's purely presentational today — same vocabulary, same themes,
+same mastery requirements, just faster/denser/less-hinted. "Teach
+advanced users harder words" is a deliberately separate, not-yet-decided
+next step — see "Discussed but not built" below and ROADMAP.md's
+"Advanced mode: harder words, not just faster presentation" for the
+product framing and the two open questions (does an advanced-only word
+gate theme mastery; does the toggle stay fully self-serve) that need an
+answer before building it.
+
+**Built on top of a moving target — worth remembering for any future
+session on this repo.** 27 commits (sub-levels, repeated-tap lock, the
+privacy page, the parent recap, voice/rate fixes, and the git-connected
+auto-deploy setup) landed through a *separate* Claude Code session while
+this work was in progress. The first `git push` was rejected
+(`! [rejected] main -> main (fetch first)`) — **always `git fetch &&
+git log HEAD..origin/main` before pushing on this repo specifically**; it
+is not safe to assume `main` is where it was at the start of a session.
+A blind `git merge` produced a real conflict (two independent new speech-
+rate constants added at the same line, and — more substantively — the
+new sub-levels code and this session's `answerCap` both touching the same
+`buildAnswerOptions` call). Rather than resolve that conflict textually,
+the safer move taken: `git merge --abort`, save the local commit on a
+throwaway branch (`git branch backup-<sha> <sha>`), `git reset --hard
+origin/main`, then **re-apply the feature edits fresh** against the new
+code (not a merge). This worked cleanly here because Food's 6 items sit
+in a single sub-level (`SUB_LEVEL_MAX_SIZE = 6`), so the scenario-prompt
+pilot never actually touches sub-level logic — but on a future conflict
+where the overlap is more than just two independent additions at the same
+line, re-reading the new code's actual structure before reapplying (as
+done here) beats trusting a mechanical 3-way merge to get the logic right.
+
+**A second, unrelated problem found while investigating the above:**
+`package.json`/`package-lock.json` had an uncommitted, accidental
+`expo: ~57.0.4 -> ^46.0.21` downgrade sitting in the working tree from
+*before* this session started (cause unknown — not this session's
+change). `git checkout -- package.json package-lock.json` reverted the
+files, but `node_modules` had already been physically installed at Expo
+46 (confirmed: `node_modules/expo/package.json` reported `46.0.21` even
+after the lockfile was back to 57) — reverting the lockfile alone does
+**not** revert already-installed packages. This is why `tsc --noEmit` and
+`expo export` both failed with `ERR_PACKAGE_PATH_NOT_EXPORTED` on
+`metro/src/lib/TerminalReporter` right after the revert, not before it.
+Fixed with `npm ci` (clean-installs exactly what the lockfile specifies).
+**If a typecheck or export ever fails with that error signature again,
+check `node_modules/expo/package.json`'s actual installed version against
+`package.json` before assuming the code is broken** — `npm ci` is the fix,
+not a code change.
+
 ## Deployment
 
 - GitHub: `sandilya629/hindi`, branch `main`.
@@ -910,9 +1011,33 @@ around). Once the app owner did that one manual step and connected the
 repo through the project's own **Settings → Git** page in the Vercel
 dashboard, it attached to the **original `hindi-quest` project directly**
 — no second project needed after all, and no URL migration to plan for.
-The two orphaned attempts (`hindi`, `hindi-quest-auto`) are harmless dead
-projects sitting in the dashboard; delete them whenever convenient, no
-rush.
+**Update, next session:** the `hindi` orphan is deleted (confirmed via the
+Vercel API, `204`). `hindi-quest-auto` turned out to not actually exist —
+looked it up directly by name (`GET /v9/projects/hindi-quest-auto`), got a
+clean `404`, not just a listing gap; nothing to delete there after all.
+**A third, previously-undocumented orphan was found in the process:** a
+project literally named `dist` (https://dist-plum-gamma-64.vercel.app),
+created ~Sep 9 — almost certainly from a `vercel deploy` run from inside
+the `dist/` folder before `.vercel` was correctly copied/linked there (see
+the manual deploy recipe above: `cp -r .vercel dist/.vercel` has to happen
+*before* `cd dist && vercel deploy`, every time, since `dist/` is
+regenerated — and discarded — by every `expo export`). Flagged for the
+project owner, not deleted without being asked first; low-risk to delete
+whenever convenient (it's static files with no real build, not connected
+to anything live).
+
+**Lesson for next time:** `vercel project rm <name>` prompts for an
+interactive confirm that this environment can't satisfy cleanly —
+`yes | vercel project rm <name>` does **not** work here; it's been tried
+twice now and both times produced a runaway output loop requiring the
+command to be killed, not a clean "y" answer. What actually works: read
+the token from the local Vercel CLI auth file
+(`%APPDATA%\xdg.data\com.vercel.cli\auth.json` on Windows → `.token`) and
+call `DELETE https://api.vercel.com/v9/projects/<name>?teamId=<teamId>`
+directly (Node's `https` module, no new dependency) — get the team id
+first via `GET /v2/teams` matching on `.slug`. A `204` response confirms
+deletion; don't rely on the CLI's own exit code if the interactive prompt
+had to be worked around.
 
 Connecting the repo does not itself trigger a deployment of whatever `main`
 already was at connection time — Vercel's git integration only builds on
@@ -959,15 +1084,21 @@ See `ROADMAP.md` for the product-facing version of this list (including
 launch/wider-audience thinking) — this section stays focused on the
 technical implementation angle.
 
-- **Sub-levels within a theme.** Four themes now sit at 10+ items (Opposites
-  10, Opposites Two 12, Starter sounds 10, Numbers 10) — the Match-and-Listen
-  *answer grid* is already capped at 6 tiles (see `ANSWER_OPTIONS_CAP`
-  above), but the *round itself* still asks every question in one sitting,
-  which is a lot for a toddler in one go, more so now that Opposites Two is
-  12 questions long. The plan discussed: add a `level` field, batch ~5-6
-  words per level, and decide broad-first (unlock level 1 of every theme
-  before any level 2) vs deep-first (finish all levels of one theme first)
-  unlock order. Recommended: broad-first (spiral curriculum).
+- **Sub-levels within a theme — done**, see "Sub-levels for larger themes
+  (fixed)" above. What's still open is the *broader* curriculum-sequencing
+  question this was a smaller step toward: sub-levels still play
+  back-to-back within one theme in the same sequential unlock order, not
+  broad-first across themes (Food set 1 → Colors set 1 → Opposites set 1 →
+  back to Food set 2). See ROADMAP.md's "Broad-first curriculum across
+  themes" for that larger, not-yet-decided piece.
+- **Advanced mode's content, not just its presentation — raised, not
+  decided.** See "Scenario prompts and Advanced mode (added)" above for
+  what shipped (speech rate, answer-tile cap, English-hint visibility only
+  — no content changes yet) and the two open questions blocking the next
+  step: whether an advanced-only word should count toward a theme's
+  mastery, and whether the toggle stays fully self-serve or gets a light
+  gate. See ROADMAP.md's "Advanced mode: harder words, not just faster
+  presentation" for the product-facing framing of the same fork.
 - **Splitting content out of App.tsx.** At ~230 content lines across 26
   arrays (13 themes x 2 languages) this is still manageable inline, but if
   it keeps growing, move to `content/hi/<theme>.ts` / `content/ta/<theme>.ts`
